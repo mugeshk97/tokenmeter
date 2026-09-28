@@ -85,6 +85,8 @@ The tag starts `.github/workflows/release.yml`, which:
 3. rebuilds the signed apt repository on GitHub Pages from the new `.deb`;
 4. updates the Homebrew cask in [mugeshk97/homebrew-tap](https://github.com/mugeshk97/homebrew-tap) to the new macOS `.zip` files (needs the `HOMEBREW_TAP_TOKEN` secret: a fine-grained token with Contents read and write on that repo). The tap's own workflow then test-installs it on a Mac.
 
+The release starts with auto-generated notes; replace them with a short, user-facing summary (what's new, install per OS, upgrade notes) using `gh release edit vX.Y.Z --notes-file notes.md`. See v1.0.2 for the format.
+
 The apt repository is signed with the key in the `APT_GPG_PRIVATE_KEY` repository secret; its public half is `packaging/apt/tokenmeter-archive-keyring.asc`. If a release fails partway, nothing is published: delete the draft and the tag (`gh release delete vX.Y.Z --yes`, `git push origin :vX.Y.Z`, `git tag -d vX.Y.Z`), fix the problem and tag again.
 
 ## License

@@ -111,6 +111,15 @@ h3 {
   margin: 0 0 6px;
 }
 
+.kicker {
+  margin: 0 0 10px;
+  color: var(--brand);
+  font-weight: 650;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
 .lead {
   font-size: 19px;
   color: var(--muted);
