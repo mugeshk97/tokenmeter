@@ -50,6 +50,8 @@ Then tick **Start at login** in Settings (or the tray menu). On Linux this write
 
 Local tool folders are the same on every OS, under your home folder (`~/.claude`, `~/.codex`, `~/.grok`, `~/.gemini`, e.g. `C:\Users\you\.codex` on Windows).
 
+**Icons:** each OS gets its own icon file, drawn from `assets/logo.svg` at every size so small icons stay sharp: `assets/icons/linux/` (16–512px PNGs), `assets/icon.ico` (Windows, 16–256px) and `assets/icon.icns` (macOS, 16–1024px with retina sizes). After editing the SVG, run `npm run icons` to regenerate them.
+
 ## Getting the keys
 
 - **Claude API:** Console → Settings → Admin Keys. You need an organization account; individual accounts can't create Admin keys.
