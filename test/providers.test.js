@@ -495,13 +495,16 @@ test('expandHome: ~ followed by / or \\ (Windows), nothing else', () => {
 
 // ---------------------------------------------------------------- Updater
 const { EventEmitter } = require('events');
-const { Updater, updateMode, updateHelpUrl, RELEASES_URL, APT_URL } = require('../src/updater');
+const { Updater, updateMode, updateHelpUrl, installedWithBrew, RELEASES_URL, APT_URL } = require('../src/updater');
 
 test('updateMode: self-updating installs vs notify-only', () => {
   assert.equal(updateMode({ platform: 'win32' }), 'auto');
   assert.equal(updateMode({ platform: 'linux' }), 'notify'); // .deb: apt installs updates
   assert.equal(updateHelpUrl('linux'), APT_URL);
   assert.equal(updateHelpUrl('darwin'), RELEASES_URL);
+  assert.equal(installedWithBrew('darwin', (p) => p === '/opt/homebrew/Caskroom/tokenmeter'), true);
+  assert.equal(installedWithBrew('darwin', () => false), false);
+  assert.equal(installedWithBrew('linux', () => true), false);
   assert.equal(updateMode({ platform: 'darwin' }), 'notify'); // unsigned Mac
   assert.equal(updateMode({ platform: 'win32', autoInstall: false }), 'notify');
 });

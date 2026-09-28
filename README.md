@@ -73,7 +73,13 @@ Run `tokenmeter-<version>-setup-x64.exe`. The installer isn't code-signed yet, s
 
 ### macOS
 
-Open the `.dmg` for your Mac (`arm64` for Apple Silicon, `x64` for Intel) and drag Tokenmeter to Applications. The app isn't signed with an Apple Developer ID yet, so macOS blocks the first launch: open **System Settings → Privacy & Security** and click **Open Anyway** next to Tokenmeter (on macOS 14 and older, right-click the app → **Open** also works). Tokenmeter lives in the menu bar, with no Dock icon.
+With [Homebrew](https://brew.sh):
+
+```bash
+brew install --cask mugeshk97/tap/tokenmeter
+```
+
+Or open the `.dmg` for your Mac (`arm64` for Apple Silicon, `x64` for Intel) and drag Tokenmeter to Applications. The app isn't signed with an Apple Developer ID yet, so macOS blocks the first launch: open **System Settings → Privacy & Security** and click **Open Anyway** next to Tokenmeter (on macOS 14 and older, right-click the app → **Open** also works). Tokenmeter lives in the menu bar, with no Dock icon.
 
 ## Getting started
 
@@ -114,7 +120,8 @@ Tokenmeter checks for a new version shortly after it starts and every 6 hours (o
 |---|---|
 | Windows installer | Downloads in the background and installs when you quit (or click the update icon to restart now). |
 | apt (Linux) | Arrives through Software Updater or `sudo apt upgrade`. |
-| macOS | The update icon opens the download page (automatic updates need a signed app). |
+| Homebrew (macOS) | `brew upgrade --cask tokenmeter`; the update icon reminds you. |
+| macOS `.dmg` | The update icon opens the download page (automatic updates need a signed app). |
 
 Turn off **Install updates automatically** in Settings to always just be told.
 

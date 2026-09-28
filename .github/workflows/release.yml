@@ -88,6 +88,46 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --draft=false --latest
 
+  # Points the Homebrew cask (mugeshk97/homebrew-tap) at the new .dmg files. Needs the
+  # HOMEBREW_TAP_TOKEN secret (a fine-grained token with Contents: write on that repo); skipped
+  # without it. The tap's own workflow then test-installs the cask on a Mac.
+  homebrew:
+    needs: publish
+    runs-on: ubuntu-latest
+    env:
+      TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+    steps:
+      - name: Skip without a tap token
+        if: env.TAP_TOKEN == ''
+        run: echo "::notice::HOMEBREW_TAP_TOKEN isn't set; the Homebrew cask was not updated."
+      - uses: actions/checkout@v4
+        if: env.TAP_TOKEN != ''
+        with:
+          repository: mugeshk97/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+      - name: Update the cask
+        if: env.TAP_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=${GITHUB_REF_NAME#v}
+          digest() {
+            gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" \
+              -q ".assets[] | select(.name == \"tokenmeter-$version-$1.dmg\") | .digest" | sed 's/^sha256://'
+          }
+          arm=$(digest arm64)
+          intel=$(digest x64)
+          [ ${#arm} = 64 ] && [ ${#intel} = 64 ] || { echo "missing dmg checksums"; exit 1; }
+          sed -i -E \
+            -e "s/^  version \".*\"/  version \"$version\"/" \
+            -e "s/^  sha256 arm:   \"[0-9a-f]{64}\"/  sha256 arm:   \"$arm\"/" \
+            -e "s/^         intel: \"[0-9a-f]{64}\"/         intel: \"$intel\"/" \
+            Casks/tokenmeter.rb
+          grep -q "version \"$version\"" Casks/tokenmeter.rb && grep -q "$arm" Casks/tokenmeter.rb && grep -q "$intel" Casks/tokenmeter.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Tokenmeter $version" && git push
+
   apt:
     needs: publish
     runs-on: ubuntu-latest

@@ -5,6 +5,8 @@
 // installs update through apt (the repo on GitHub Pages), and macOS can't replace itself until the
 // app is signed with a Developer ID, so it links to the download page.
 
+const fs = require('fs');
+
 const RELEASES_URL = 'https://github.com/mugeshk97/tokenmeter/releases/latest';
 const APT_URL = 'https://mugeshk97.github.io/tokenmeter/'; // apt setup instructions
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
@@ -18,6 +20,11 @@ function updateMode({ platform, autoInstall = true }) {
   if (!autoInstall) return 'notify';
   if (platform === 'win32') return 'auto';
   return 'notify'; // Linux: apt installs it; macOS: Squirrel.Mac needs a Developer ID signature
+}
+
+/** True when Homebrew installed this copy (mugeshk97/tap), so `brew upgrade` is the way to update. */
+function installedWithBrew(platform = process.platform, exists = fs.existsSync) {
+  return platform === 'darwin' && ['/opt/homebrew/Caskroom/tokenmeter', '/usr/local/Caskroom/tokenmeter'].some((p) => exists(p));
 }
 
 /** Where the update button points when this install can't update itself. */
@@ -38,7 +45,7 @@ class Updater {
     this.onChange = onChange;
     this.openExternal = openExternal;
     this.au = autoUpdater || require('electron-updater').autoUpdater;
-    this.state = { status: 'idle', version: null, mode: this.mode(), platform: process.platform };
+    this.state = { status: 'idle', version: null, mode: this.mode(), platform: process.platform, brew: installedWithBrew() };
     this.timers = [];
 
     this.au.autoDownload = false; // decided per check, from the mode
@@ -95,4 +102,4 @@ class Updater {
   }
 }
 
-module.exports = { Updater, updateMode, updateHelpUrl, RELEASES_URL, APT_URL };
+module.exports = { Updater, updateMode, updateHelpUrl, installedWithBrew, RELEASES_URL, APT_URL };

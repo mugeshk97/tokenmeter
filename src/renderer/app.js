@@ -597,7 +597,9 @@ function renderUpdate() {
       ? `Update ${u.version} is ready. Click to restart and install it.`
       : u.platform === 'linux'
         ? `Update ${u.version} is available through Software Updater (or sudo apt upgrade). Click for apt setup.`
-        : `Update ${u.version} is available. Click to open the download page.`;
+        : u.brew
+          ? `Update ${u.version} is available: run brew upgrade --cask tokenmeter. Click for release notes.`
+          : `Update ${u.version} is available. Click to open the download page.`;
   btn.title = label;
   btn.setAttribute('aria-label', label);
 }
