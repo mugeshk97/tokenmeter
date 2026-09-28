@@ -80,6 +80,7 @@ function sparkline(points, label) {
 
 const STATUS_TEXT = { ok: 'up to date', error: 'error', loading: 'loading', unconfigured: 'not set up' };
 const DENSITIES = ['compact', 'normal', 'detailed'];
+const SIZE_NAMES = { compact: 'Compact', normal: 'Normal', detailed: 'Detailed' };
 let pickerOpen = false;
 
 function density() {
@@ -399,12 +400,13 @@ function render() {
   const sortBtn = $('#btn-sort');
   sortBtn.setAttribute('aria-pressed', String(sorted));
   sortBtn.title = sorted ? 'Sorted by nearest limit. Click for your own order (drag cards to arrange).' : 'Your own order (drag cards to arrange). Click to sort by nearest limit.';
+  // One button cycles the card size; its icon shows the current size.
+  const sizeBtn = $('#btn-size');
+  const nextSize = DENSITIES[(DENSITIES.indexOf(d) + 1) % DENSITIES.length];
+  sizeBtn.dataset.size = d;
+  sizeBtn.setAttribute('aria-label', `Card size: ${SIZE_NAMES[d]}`);
+  sizeBtn.title = `Card size: ${SIZE_NAMES[d]}. Click for ${SIZE_NAMES[nextSize]}.`;
   scheduleFit();
-  for (const b of document.querySelectorAll('#density button')) {
-    const on = b.dataset.density === d;
-    b.setAttribute('aria-checked', String(on));
-    b.tabIndex = on ? 0 : -1; // roving tabindex: one tab stop for the group
-  }
 }
 
 // ---------- ordering: sort toggle, drag and Alt+arrow ----------
@@ -522,29 +524,30 @@ cardsRoot.addEventListener('contextmenu', async (e) => {
   else if (action === 'open') api.openConsole(id);
 });
 
-// ---------- first-run hint while pinned ----------
-// Pinned is the default, so new users see no settings button: point them at the top bar once.
+// ---------- first launch while pinned ----------
+// Pinned is the default and hides the top bar, so on first launch show it for a few seconds and
+// let it slide away: that shows where the controls went. Once is enough.
 {
-  const KEY = 'tokenmeter.pinHintSeen';
-  const hint = $('#pin-hint');
-  let seen = false;
+  const KEY = 'tokenmeter.pinnedBarShown';
+  let shown = false;
   try {
-    seen = localStorage.getItem(KEY) === '1';
+    shown = localStorage.getItem(KEY) === '1';
   } catch {
-    /* storage unavailable: show the hint this session */
+    /* storage unavailable: show it this session */
   }
-  hint.hidden = seen;
-  const dismiss = () => {
-    if (hint.hidden || !pinned()) return;
-    hint.hidden = true;
+  const done = () => {
+    document.body.classList.remove('bar-peek');
     try {
       localStorage.setItem(KEY, '1');
     } catch {
       /* fine: it just shows again next launch */
     }
   };
-  $('.topbar').addEventListener('mouseenter', dismiss);
-  $('.topbar').addEventListener('focusin', dismiss);
+  if (!shown) {
+    document.body.classList.add('bar-peek');
+    setTimeout(done, 4000);
+    document.body.addEventListener('mouseenter', done, { once: true });
+  }
 }
 
 // ---------- moving the pinned widget ----------
@@ -771,7 +774,6 @@ async function openSettings(focusId) {
 
   buildProviderFields(settingsData);
   settingsOpen = true;
-  $('#toolbar').hidden = true;
   $('#cards').hidden = true;
   $('#settings').hidden = false;
   scheduleFit();
@@ -795,7 +797,6 @@ function closeSettings() {
   settingsOpen = false;
   const hadFocus = $('#settings').contains(document.activeElement);
   $('#settings').hidden = true;
-  $('#toolbar').hidden = false;
   $('#cards').hidden = false;
   render();
   // Focus would otherwise be lost on the now-hidden form.
@@ -854,15 +855,7 @@ $('#btn-add').addEventListener('click', () => {
   if (settingsOpen) closeSettings();
   togglePicker();
 });
-for (const b of document.querySelectorAll('#density button')) b.addEventListener('click', () => setDensity(b.dataset.density));
-$('#density').addEventListener('keydown', (e) => {
-  // Radio-group arrow keys
-  const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
-  if (!step) return;
-  e.preventDefault();
-  const next = DENSITIES[(DENSITIES.indexOf(density()) + step + DENSITIES.length) % DENSITIES.length];
-  setDensity(next).then(() => document.querySelector(`#density [data-density="${next}"]`).focus());
-});
+$('#btn-size').addEventListener('click', () => setDensity(DENSITIES[(DENSITIES.indexOf(density()) + 1) % DENSITIES.length]));
 $('#btn-sort').addEventListener('click', () => setSortByLimit(!sortByLimit()));
 $('#btn-cancel').addEventListener('click', closeSettings);
 $('#settings-form').opacity.addEventListener('input', showOpacity);

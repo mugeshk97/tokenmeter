@@ -87,6 +87,7 @@ body {
 }
 
 body {
+  position: relative; /* the pinned top bar floats over the top edge */
   display: flex;
   flex-direction: column;
   border: 1px solid var(--border);
@@ -169,6 +170,9 @@ button {
   margin: 0;
   font-size: var(--text-sm);
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis; /* the header is full at narrow widths */
 }
 
 /* Countdown to the next API refresh */
@@ -229,13 +233,13 @@ button {
 
 .actions {
   display: flex;
-  gap: var(--sp-2);
+  gap: 1px;
   -webkit-app-region: no-drag;
 }
 
 .icon {
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
-  width: 26px;
+  width: 24px; /* eight buttons share the header at 340px */
   height: 26px;
   display: grid;
   place-items: center;
@@ -247,8 +251,6 @@ button {
 }
 
 .icon:active:not(:disabled),
-.seg button:active,
-.sort:active,
 .card-hide:active,
 .pick:active,
 .link-btn:active,
@@ -310,83 +312,18 @@ button {
   border-bottom: 1px solid var(--border);
 }
 
-/* ---- Toolbar: card size switch + sort toggle ---- */
-.toolbar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-8);
-  padding: var(--sp-8) var(--sp-8) 0;
+/* ---- Card size and sort (header) ---- */
+.size svg {
+  display: none;
 }
 
-.seg {
-  display: flex;
-  gap: 1px;
-  padding: var(--sp-2);
-  border-radius: var(--radius-sm);
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-}
-
-.seg button {
-  width: 28px;
-  height: 22px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-}
-
-.seg button:hover {
-  color: var(--text);
-}
-
-.seg button[aria-checked='true'] {
-  background: var(--panel);
-  color: var(--text);
-  box-shadow: var(--shadow-sm);
-}
-
-.seg svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-}
-
-.seg button[aria-checked='true'] svg {
-  fill: currentColor;
-  fill-opacity: 0.25;
-}
-
-.sort {
-  width: 28px;
-  height: 28px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease;
-}
-
-.sort:hover {
-  color: var(--text);
+.size[data-size='compact'] .size-compact,
+.size[data-size='normal'] .size-normal,
+.size[data-size='detailed'] .size-detailed {
+  display: block;
 }
 
 .sort[aria-pressed='true'] {
-  background: color-mix(in srgb, var(--focus) 14%, transparent);
-  border-color: color-mix(in srgb, var(--focus) 40%, var(--border));
   color: var(--focus);
 }
 
@@ -400,14 +337,12 @@ button {
   display: none;
 }
 
-.sort svg {
-  width: 15px;
-  height: 15px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.actions-sep {
+  align-self: center;
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: var(--border);
 }
 
 /* ---- Cards grid ---- */
@@ -1067,12 +1002,32 @@ select {
   white-space: nowrap;
 }
 
-/* ---- Pinned: only the cards, the refresh ring and refresh ----
-   Hovering or tabbing into the top bar brings the other controls back. Electron sends no hover
-   over native drag areas, so while pinned the bar isn't one; app.js moves the window instead. */
+/* ---- Pinned: cards only ----
+   The top bar floats over the top edge and slides in while the mouse is over the widget (or the
+   keyboard is in it), so the window never resizes for it. Electron sends no hover over native drag
+   areas, so while pinned the bar isn't one; app.js moves the window when it's dragged. */
 .pinned .topbar {
   -webkit-app-region: no-drag;
   cursor: grab;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+  background: var(--bg);
+  box-shadow: 0 6px 16px rgb(0 0 0 / 0.25);
+  transform: translateY(-100%);
+  opacity: 0;
+  /* Slide in at once; wait a moment before sliding out, so a brief exit doesn't flicker it. */
+  transition: transform 180ms ease 250ms, opacity 180ms ease 250ms;
+}
+
+.pinned:hover .topbar,
+.pinned .topbar:focus-within,
+.pinned.bar-peek .topbar {
+  transform: none;
+  opacity: 1;
+  transition-delay: 0ms;
 }
 
 .pinned .topbar :is(button, .ring) {
@@ -1083,15 +1038,6 @@ select {
   cursor: default;
 }
 
-.pinned .topbar:not(:hover):not(:focus-within) :is(.logo, .app-title, #btn-add, #btn-pin, #btn-settings, #btn-hide) {
-  display: none;
-}
-
-.pinned .topbar:not(:hover):not(:focus-within) .brand {
-  margin-left: auto; /* ring sits next to the refresh button */
-}
-
-.pinned .toolbar,
 .pinned .card-hide,
 .pinned .grip {
   display: none;
@@ -1099,18 +1045,6 @@ select {
 
 .pinned .card {
   cursor: default;
-}
-
-/* One-time hint for the pinned top bar (app.js "first-run hint"). */
-.pin-hint {
-  display: none;
-  font-size: var(--text-xs);
-  color: var(--muted);
-  white-space: nowrap;
-}
-
-.pinned .topbar:not(:hover):not(:focus-within) .pin-hint:not([hidden]) {
-  display: inline;
 }
 
 /* Error with a way out: Retry, or Fix key for a rejected key. */
