@@ -1,37 +1,63 @@
-# Tokenmeter
+<p align="center">
+  <img src="assets/logo.svg" width="80" height="80" alt="">
+</p>
 
-_Formerly "AI Usage Widget". On first start, Tokenmeter copies your settings from `~/.config/AI Usage Widget` and replaces the old start-at-login entry. Saved keys may need re-entering, because the system keyring entry is tied to the app name._
+<h1 align="center">Tokenmeter</h1>
 
-A small always-on-top Electron widget for Linux (Debian/Ubuntu), Windows and macOS that keeps your AI usage visible on the desktop:
+<p align="center">
+  <strong>See how much of your AI limits you have left, at a glance.</strong><br>
+  A small always-on-top desktop widget for Claude Code, Codex, Copilot, Gemini CLI, Grok and the Claude, OpenAI and xAI APIs.
+</p>
 
-| Card | Source | Needs | Shows |
+<p align="center">
+  <a href="https://github.com/mugeshk97/tokenmeter/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/mugeshk97/tokenmeter?label=release"></a>
+  <a href="https://github.com/mugeshk97/tokenmeter/actions/workflows/test.yml"><img alt="Tests" src="https://github.com/mugeshk97/tokenmeter/actions/workflows/test.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/github/license/mugeshk97/tokenmeter"></a>
+  <img alt="Linux, Windows, macOS" src="https://img.shields.io/badge/platforms-Linux%20%7C%20Windows%20%7C%20macOS-7aa2ff">
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/compact-dark.png" width="300" alt="Tokenmeter in Compact size, dark theme: one tile per tool showing what's left on its tightest limit">
+  &nbsp;
+  <img src="docs/screenshots/normal-light.png" width="300" alt="Tokenmeter in Normal size, light theme: each card with its limits, bars and key stats">
+</p>
+<p align="center"><sub>Compact (dark) and Normal (light), with sample data.</sub></p>
+
+---
+
+## Why Tokenmeter
+
+AI coding tools meter you in different ways: 5-hour windows, weekly limits, premium-request quotas, monthly budgets. Each keeps its numbers on its own page. Tokenmeter puts them side by side on your desktop and leads with **what's left**, so you know which tool you can lean on before you hit a wall.
+
+- **What's left, first.** Every card headlines its tightest limit: "2h 6m left in session", "29% left this week", "$57.82 left of $100".
+- **Closest to running out comes first.** Cards sort by nearest limit (or drag them into your own order).
+- **Red means act.** Once 80% of a limit is used, the number and bar turn red and get a warning icon.
+- **Local-first and private.** Most cards read files your tools already write on your computer. API keys are encrypted with your system keychain and only ever sent to that provider.
+- **Stays out of the way.** Pinned, it shows only the cards; the controls slide in when you hover.
+- **Keeps itself current.** Updates install automatically on Windows and through apt on Linux.
+
+## Supported tools
+
+| Tool | Where the numbers come from | Setup | Shows |
 |---|---|---|---|
-| **Claude Code** | local transcripts `~/.claude/projects/**/*.jsonl` | nothing | tokens in the current 5-hour session + time until it resets, tokens today, top model, hourly chart |
-| **Codex** | local session logs `~/.codex/sessions/**/rollout-*.jsonl` | nothing | 5-hour and weekly limit % with reset countdowns, tokens today, plan |
-| **Grok CLI** | local session logs `~/.grok/sessions/**/updates.jsonl` | nothing | tokens today, cost today and month to date (as reported by the CLI), top model, cache-hit %, hourly chart |
-| **GitHub Copilot** | GitHub `copilot_internal/user` endpoint | GitHub token (output of `gh auth token`) | premium requests / chat / completions quota % with reset date, plan |
-| **Gemini CLI** | saved chats `~/.gemini/tmp/*/chats/session-*.json` | nothing | tokens today and last 7 days, top model, hourly chart |
-| **Claude API** | Anthropic Usage & Cost Admin API | Admin API key `sk-ant-admin01-…` | month-to-date cost, today, 24h tokens, cache-hit %, optional budget bar |
-| **xAI API** | xAI Management API | Management Key + Team ID | month-to-date spend, today, top model, postpaid bill vs spending limit, prepaid credit |
-| **OpenAI API** (off by default) | OpenAI org Costs/Usage API | Admin key `sk-admin-…` | month-to-date cost, 24h tokens and requests (this is where Codex spend lands if Codex runs on an API key) |
+| **Claude Code** | Local transcripts in `~/.claude/projects` | None | Time left in the 5-hour session, session and daily tokens, top model, hourly chart |
+| **Codex** | Local session logs in `~/.codex/sessions` | None | 5-hour and weekly limits left with reset times, tokens today, plan |
+| **Gemini CLI** | Saved chats in `~/.gemini/tmp` | None | Tokens today and last 7 days, top model, hourly chart |
+| **Grok CLI** | Local session logs in `~/.grok/sessions` | None | Tokens today, cost today and this month (as the CLI reports it), cache hits |
+| **GitHub Copilot** | GitHub's Copilot quota endpoint | A GitHub token (`gh auth token`) | Premium requests left with reset date; chat and completions quota |
+| **Claude API** | Anthropic Usage & Cost Admin API | Admin API key | Money left of your monthly budget, spend today and this month, tokens, cache hits |
+| **xAI API** | xAI Management API | Management key + team ID | Money left of your spending limit, spend, top model, prepaid credit |
+| **OpenAI API** *(off by default)* | OpenAI organization Costs & Usage API | Admin key | Money left of your monthly budget, spend, tokens and requests |
 
-The local cards refresh every minute (cached, only changed files are re-read). The API cards refresh every 5 minutes by default (configurable, minimum 1).
+Local cards refresh every minute; API cards every 5 minutes by default (you can change it in Settings).
 
-## Run it
+## Install
 
-```bash
-cd ai-usage-widget   # project folder
-npm install
-npm start          # run from source
-npm run demo       # preview the UI with sample numbers
-npm test           # provider/parser tests (no network)
-```
+Download the latest version from **[GitHub Releases](https://github.com/mugeshk97/tokenmeter/releases/latest)**.
 
-## Install as an app
+### Linux (Debian, Ubuntu and derivatives)
 
-Download the installer for your OS from [GitHub Releases](https://github.com/mugeshk97/tokenmeter/releases/latest), or build it yourself: `npm run dist` builds installers for the OS you run it on (each OS builds its own).
-
-**Linux (apt):** add the Tokenmeter apt repository once and updates arrive with your other system updates:
+Add the Tokenmeter apt repository once; updates then arrive with your other system updates:
 
 ```bash
 curl -fsSL https://mugeshk97.github.io/tokenmeter/tokenmeter-archive-keyring.gpg | sudo tee /usr/share/keyrings/tokenmeter-archive-keyring.gpg >/dev/null
@@ -39,110 +65,114 @@ echo "deb [arch=amd64 signed-by=/usr/share/keyrings/tokenmeter-archive-keyring.g
 sudo apt update && sudo apt install tokenmeter
 ```
 
-The repository is signed with key `51E7 3671 79B2 798A B250  5D10 7CFF 9452 0564 EA38`.
+The repository is signed with key `51E7 3671 79B2 798A B250  5D10 7CFF 9452 0564 EA38`. You can also install the `.deb` from the release page directly (`sudo apt install ./tokenmeter-*-amd64.deb`).
 
-**Linux (build it yourself)**
+### Windows
 
-```bash
-npm run dist
-# → dist/tokenmeter-1.0.0-amd64.deb
+Run `tokenmeter-<version>-setup-x64.exe`. The installer isn't code-signed yet, so SmartScreen may warn about an unknown publisher: click **More info → Run anyway**. Tokenmeter then updates itself.
 
-sudo apt install ./dist/tokenmeter-1.0.0-amd64.deb
-```
+### macOS
 
-**Windows:** `npm run dist` → `dist/tokenmeter-1.0.0-setup-x64.exe`. The installer isn't code-signed yet, so SmartScreen warns about an unknown publisher: click **More info → Run anyway**.
+Open the `.dmg` for your Mac (`arm64` for Apple Silicon, `x64` for Intel) and drag Tokenmeter to Applications. The app isn't signed with an Apple Developer ID yet, so macOS blocks the first launch: open **System Settings → Privacy & Security** and click **Open Anyway** next to Tokenmeter (on macOS 14 and older, right-click the app → **Open** also works). Tokenmeter lives in the menu bar, with no Dock icon.
 
-**macOS:** `npm run dist` → `dist/tokenmeter-1.0.0-arm64.dmg` (Apple Silicon) and `-x64.dmg` (Intel). The app isn't signed with an Apple Developer ID yet, so macOS blocks the first launch: open **System Settings → Privacy & Security** and click **Open Anyway** next to Tokenmeter (on macOS 14 and older, right-click the app → **Open** also works). Or run `xattr -dr com.apple.quarantine /Applications/Tokenmeter.app` once. It runs from the menu bar, with no Dock icon.
+## Getting started
 
-Then tick **Start at login** in Settings (or the tray menu). On Linux this writes `~/.config/autostart/tokenmeter.desktop`; on Windows and macOS it uses the system login items.
+1. **Launch Tokenmeter.** Local tools (Claude Code, Codex, Gemini CLI, Grok CLI) show up on their own if you use them.
+2. **Add keys for API tools** in **Settings** (the gear icon), or click **Set up** on the "not set up" line at the bottom of the widget:
+   - **Claude API:** [Claude Console](https://platform.claude.com) → Settings → Admin Keys (organization accounts only).
+   - **xAI API:** console.x.ai → Settings → Management Keys, plus your team ID from Team settings.
+   - **OpenAI API:** platform.openai.com → Settings → Organization → Admin keys.
+   - **GitHub Copilot:** run `gh auth token` and paste the output.
+   - Optional: set a monthly budget for the Claude, OpenAI or xAI API to see money left instead of money spent.
+3. **Make it yours.** Tick **Start at login**, hide tools you don't use (× on a card, bring them back with **+**), and pick a card size.
 
-Local tool folders are the same on every OS, under your home folder (`~/.claude`, `~/.codex`, `~/.grok`, `~/.gemini`, e.g. `C:\Users\you\.codex` on Windows).
+<p align="center">
+  <img src="docs/screenshots/pinned-dark.png" width="300" alt="Tokenmeter pinned: only the cards are visible">
+</p>
+<p align="center"><sub>Pinned (the default): just the cards. Hover to bring back the controls.</sub></p>
 
-**Updates:** the app checks GitHub Releases 15 seconds after it starts and every 6 hours after that (tray menu: **Check for updates**). When a newer version is out, an update icon takes the refresh ring's place in the header.
+## Using Tokenmeter
 
-| Install | What happens |
+| | |
 |---|---|
-| Windows installer | Downloads in the background and installs when you quit (or click the update icon to restart now) |
-| Linux `.deb` | Updates arrive through Software Updater / `sudo apt upgrade` from the apt repository above; the update icon links to the apt setup if you installed the `.deb` by hand |
-| macOS | The update icon opens the download page (macOS needs a signed app to update itself) |
+| **Card size** | The grid icon in the header cycles Compact → Normal → Detailed. |
+| **Order** | The sort icon puts the card closest to its limit first (on by default). Drag a card, press Alt+arrow keys on it, or right-click it to set your own order. |
+| **Pin** | Pinned keeps Tokenmeter above other windows and hides everything but the cards; hover (or Tab) to reveal the top bar. Drag the top bar to move the widget. |
+| **Card menu** | Right-click a card (or press the menu key) to move it, hide it, or open that tool's usage page. |
+| **Refresh** | The small ring next to the name fills until the next API refresh; hover it for exact times, or click refresh. |
+| **Errors** | A failed card says why and offers **Retry** or **Fix key**. A red dot marks it; a grey dot means not set up. |
+| **Tray** | Closing hides Tokenmeter to the tray (menu bar on macOS). The tray menu has Show/Hide, Refresh, Always on top, Start at login, Check for updates, Settings and Quit. |
+| **Theme** | Follows your system's light or dark mode, or pick one in Settings. |
+
+Everything works from the keyboard, and screen readers announce when a tool starts failing or recovers.
+
+## Updates
+
+Tokenmeter checks for a new version shortly after it starts and every 6 hours (or **Check for updates** in the tray menu). When one is out, an update icon appears in the header.
+
+| Installed with | What happens |
+|---|---|
+| Windows installer | Downloads in the background and installs when you quit (or click the update icon to restart now). |
+| apt (Linux) | Arrives through Software Updater or `sudo apt upgrade`. |
+| macOS | The update icon opens the download page (automatic updates need a signed app). |
 
 Turn off **Install updates automatically** in Settings to always just be told.
 
-**Releasing:** set the new version and push its tag; `.github/workflows/release.yml` does the rest:
+## Privacy and security
+
+- **Your usage data stays on your computer.** Local cards only read files your tools already write. Nothing is sent to Tokenmeter or any third party; there is no analytics or telemetry.
+- **Keys are encrypted** with your operating system's keychain (macOS Keychain, Windows DPAPI, or GNOME Keyring / KWallet on Linux) and stored in Tokenmeter's settings folder, readable only by you. If Linux has no keyring running, Settings warns you that keys are stored without encryption.
+- **Keys go only to their own provider** (for example, your Anthropic key only to `api.anthropic.com`), never to the widget's page.
+- **The widget page is locked down:** no Node.js access and a strict Content Security Policy with no remote content.
+- You can use environment variables instead of saved keys: `ANTHROPIC_ADMIN_KEY`, `XAI_MANAGEMENT_API_KEY` + `XAI_TEAM_ID`, `OPENAI_ADMIN_KEY`, `GITHUB_TOKEN`.
+
+Found a security problem? Please report it privately through [GitHub security advisories](https://github.com/mugeshk97/tokenmeter/security/advisories/new) rather than a public issue.
+
+## What the numbers mean
+
+- **Claude Code:** Anthropic doesn't publish a usage-limit API for Pro and Max plans, so Tokenmeter groups your local transcripts into 5-hour sessions (as the plan limits do) and shows the time left in the current one, not a "% of limit".
+- **Codex:** shows the rate-limit snapshot Codex saves after each turn, so it updates when you use Codex. Usage from ChatGPT on the web appears after a local session records it.
+- **GitHub Copilot:** uses the same undocumented endpoint as the Copilot editor extensions, which GitHub could change without notice.
+- **Gemini CLI:** Gemini API keys have no usage endpoint, so only usage through the CLI is counted.
+- **Grok CLI:** the cost is what the CLI reports (the API-equivalent price), not your grok.com subscription bill. Key-based spend is on the xAI API card.
+- **Claude API:** data typically arrives within about 5 minutes; daily costs use UTC days, and Priority Tier cost isn't included.
+
+## Troubleshooting
+
+- **No tray icon on GNOME:** install the *AppIndicator and KStatusNotifierItem Support* extension (Ubuntu ships it).
+- **Not staying on top on Wayland:** Wayland doesn't let apps keep themselves on top or pick their position, so Tokenmeter runs through XWayland by default (Settings → "Use XWayland on Wayland").
+- **A local tool shows no data:** check its folder in Settings; the defaults are `~/.claude`, `~/.codex`, `~/.gemini` and `~/.grok` (for example `C:\Users\you\.codex` on Windows).
+- **Moving from "AI Usage Widget":** Tokenmeter copies your old settings on first start. Saved keys may need re-entering, because the keychain entry is tied to the app name.
+
+## For developers
+
+Tokenmeter is an Electron app written in plain JavaScript, with no UI framework and no build step for the app itself.
 
 ```bash
-npm version patch        # bumps package.json and creates the tag, e.g. v1.0.1
-git push origin dev --follow-tags
+git clone https://github.com/mugeshk97/tokenmeter.git
+cd tokenmeter
+npm install
+npm start          # run from source
+npm run demo       # the UI with sample data, no keys needed
+npm test           # provider and parser tests (no network)
+npm run dist       # installers for the OS you're on
 ```
-
-The workflow builds Linux, Windows and macOS installers into a draft release, publishes it once all three succeed (so the in-app updater never sees a half-finished release), then rebuilds the signed apt repository on GitHub Pages from the new `.deb`.
-
-**Icons:** each OS gets its own icon file, drawn from `assets/logo.svg` at every size so small icons stay sharp: `assets/icons/linux/` (16–512px PNGs), `assets/icon.ico` (Windows, 16–256px) and `assets/icon.icns` (macOS, 16–1024px with retina sizes). After editing the SVG, run `npm run icons` to regenerate them.
-
-## Getting the keys
-
-- **Claude API:** Console → Settings → Admin Keys. You need an organization account; individual accounts can't create Admin keys.
-- **Grok:** console.x.ai → Settings → Management Keys. Your account needs "Management Keys Read + Write". The Team ID is under Team settings.
-- **OpenAI:** platform.openai.com → Settings → Organization → Admin keys.
-- **GitHub Copilot:** run `gh auth token` and paste the output (`gho_…`). That token is known to work with the quota endpoint. Personal access tokens may also work but haven't been tested. The token is only sent to `api.github.com`.
-
-Paste them in **Settings** (the gear icon). Keys are:
-
-- encrypted with the system keyring through Electron `safeStorage` (GNOME Keyring or KWallet);
-- stored in `~/.config/Tokenmeter/secrets.json` with 0600 permissions;
-- never sent to the widget's web page;
-- only sent to each provider's own API host.
-
-If no keyring is running, Settings shows a warning and the keys are stored unencrypted in that user-only file.
-
-You can also use environment variables instead: `ANTHROPIC_ADMIN_KEY`, `XAI_MANAGEMENT_API_KEY` + `XAI_TEAM_ID`, `OPENAI_ADMIN_KEY`, `GITHUB_TOKEN`. These only apply when you launch the app from a shell.
-
-## Desktop notes
-
-- **Moving it:** drag the header. The window position and size are remembered.
-- **Pinned (always on top, the default):** the widget shows only the cards. Move the mouse over it (or tab into it) and the full top bar slides in over the top edge, with refresh, the pin to unpin and the rest; it slides away when you leave. On first launch the bar shows for a few seconds before sliding away. While pinned, cards can't be hidden or reordered; you can still drag the top bar to move the widget. Unpinning shows everything again; the tray menu's "Always on top" does the same.
-- **Closing it:** × hides the widget to the tray (the menu bar on macOS). The tray menu has Show/Hide, Refresh, Always on top, Start at login, Settings and Quit. Launching the app again also brings the widget back.
-- **GNOME tray icon (Linux):** GNOME needs the *AppIndicator and KStatusNotifierItem Support* extension to show it. Ubuntu ships this by default.
-- **Wayland (Linux):** native Wayland apps can't keep themselves on top or choose their position. The app therefore runs through XWayland by default ("Use XWayland on Wayland" in Settings).
-- **Opening a provider's page:** click a card's name to open its usage page in your browser.
-- **Window size:** the widget sizes its height to its content. It shrinks for Compact tiles and grows for Detailed cards or when you add a tool, up to the screen height; past that it scrolls. You set the width, and the grid reflows to it. A widget placed in the lower half of the screen grows upward. Turn this off with "Fit window height to its content" in Settings to size the window by hand.
-- **What's left, first:** each card leads with what's left on its tightest limit (Codex shows whichever of the 5-hour and weekly limits is closer). Every tool uses the same Tokenmeter blue; a bar (and its number) turns red once 80% of the limit is used, i.e. 20% or less is left. Cards without a limit show tokens today.
-- **Card size:** the grid icon in the header cycles every card through Compact, Normal and Detailed (the icon shows the current size); it switches between small tiles (two per row, one number, one bar, one footnote), Normal (two per row) and Detailed (the full card, with chart and notes). The grid adds columns as you widen the window.
-- **Order:** the sort button next to it (blue when on, the default) puts the card closest to running out first. Drag a card, or focus it and press Alt+arrow keys, to set your own order instead; this turns sorting off. Click the button again to go back to sorting by limit.
-- **Refresh ring:** the small ring next to the name fills until the next API refresh; hover or tab to it for the exact times.
-- **Status dot:** a card only shows a dot when something needs attention: red when its last refresh failed, grey when it isn't set up yet.
-- **Adding and hiding tools:** hover a card and click × to hide it. The + button in the header lists hidden tools at the top of the widget; click one to bring it back. The button is greyed out when every tool is shown. Settings still has a "Show on widget" checkbox for each tool.
-- **Card menu:** right-click a card (or press the keyboard menu key on it) to move it left or right, hide it, or open its usage page, without dragging.
-- **Tools not set up** are listed on one line at the bottom ("OpenAI API not set up · Set up") instead of taking a card each.
-- **Errors:** a failed card says why and offers a way out: **Retry** for temporary failures (network, rate limit) or **Fix key** when a key was rejected or is missing.
-- **Running low:** once 80% of a limit is used, the number turns red and gets a warning icon.
-
-## What the numbers mean (and their limits)
-
-- **Claude Code** counts tokens from your local transcripts, grouped into 5-hour blocks the same way the plan limits work.
-  - Anthropic doesn't publish a usage-limit API for Pro/Max plans, so this card shows tokens and time, not a "% of limit".
-  - The headline and bar show how much of the current 5-hour window is left.
-- **Codex** shows the rate-limit snapshot that the Codex CLI/IDE saves after each turn.
-  - It only updates when you use Codex. If a window has reset since your last use, the card shows 100% left and says so.
-  - Usage from ChatGPT web (Codex cloud tasks) only appears after a local session records it.
-- **Grok CLI** sums the usage each finished turn logs locally. The cost is what the CLI reports (the API-equivalent price), so on a grok.com subscription it isn't what you're billed. Key-based xAI spend is on the xAI API card.
-- **GitHub Copilot** uses the same undocumented endpoint as the Copilot editor extensions, so GitHub could change it without notice. Quotas marked unlimited show as a stat instead of a bar.
-- **Gemini CLI** counts tokens from chats the CLI saved. Gemini API keys have no usage endpoint, so API usage outside the CLI isn't shown.
-- **Claude API** data typically arrives within about 5 minutes. The daily cost buckets are UTC days, and Priority Tier cost isn't included in the cost report.
-- **Grok** "month to date" comes from the usage analytics endpoint.
-  - The prepaid-credit figure assumes xAI's ledger convention that credits are negative, e.g. a $10 top-up is `-1000` cents.
-  - If that figure looks wrong for your account, check it against console.x.ai.
-
-## Layout
 
 ```
 src/main.js            window, tray, IPC, autostart, polling lifecycle
-src/preload.js         minimal API exposed to the page (no Node in the renderer)
-src/config.js          config + encrypted secrets
-src/poller.js          refresh scheduling; keeps last good numbers when a call fails
-src/providers/*.js     one module per source; return a normalized card
-src/renderer/*         widget UI (strict CSP, no remote content)
+src/updater.js         auto-update from GitHub Releases
+src/preload.js         the small API exposed to the page (no Node.js in the renderer)
+src/config.js          settings and encrypted secrets
+src/poller.js          refresh scheduling; keeps the last good numbers when a call fails
+src/providers/*.js     one module per tool, each returning a normalized card
+src/renderer/*         the widget UI (strict CSP, no remote content)
 test/                  node:test suite with mocked API responses and fake log folders
+packaging/apt/         builds the signed apt repository
+scripts/               icon generation from assets/logo.svg
 ```
 
-Adding another provider means adding a module that returns `{ headline, meters, stats, spark, note }` and registering it in `src/providers/index.js`.
+Want to add a tool, fix a bug or improve the UI? See **[CONTRIBUTING.md](CONTRIBUTING.md)** for the development workflow, how to add a provider, and how releases are made.
+
+## License
+
+[MIT](LICENSE) © Mugesh Kannan K S
