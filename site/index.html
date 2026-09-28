@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tokenmeter: AI usage limits widget for Linux, Windows, macOS</title>
+  <meta name="description" content="See how much of your Claude Code, Codex, Copilot, Gemini and Grok limits are left, plus Claude, OpenAI and xAI API budgets. Free for Linux, Windows, macOS.">
+  <link rel="canonical" href="https://mugeshk97.github.io/tokenmeter/">
+  <link rel="icon" type="image/svg+xml" href="logo.svg">
+  <meta name="theme-color" content="#0f1115">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Tokenmeter">
+  <meta property="og:title" content="Tokenmeter: see how much of your AI limits you have left">
+  <meta property="og:description" content="A free, open-source desktop widget for Claude Code, Codex, Copilot, Gemini CLI, Grok and the Claude, OpenAI and xAI APIs. Linux, Windows and macOS.">
+  <meta property="og:url" content="https://mugeshk97.github.io/tokenmeter/">
+  <meta property="og:image" content="https://mugeshk97.github.io/tokenmeter/og.png">
+  <meta property="og:image:width" content="1280">
+  <meta property="og:image:height" content="640">
+  <meta property="og:image:alt" content="Tokenmeter widget showing what's left on each AI tool's limit">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Tokenmeter",
+    "description": "Desktop widget that shows how much of your AI usage limits you have left: Claude Code, Codex, GitHub Copilot, Gemini CLI, Grok CLI and the Claude, OpenAI and xAI APIs.",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Linux, Windows, macOS",
+    "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+    "license": "https://opensource.org/licenses/MIT",
+    "url": "https://mugeshk97.github.io/tokenmeter/",
+    "downloadUrl": "https://github.com/mugeshk97/tokenmeter/releases/latest",
+    "image": "https://mugeshk97.github.io/tokenmeter/og.png",
+    "screenshot": "https://mugeshk97.github.io/tokenmeter/screenshots/compact-dark.png",
+    "author": { "@type": "Person", "name": "Mugesh Kannan K S" },
+    "codeRepository": "https://github.com/mugeshk97/tokenmeter"
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      { "@type": "Question", "name": "Is Tokenmeter free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Tokenmeter is free and open source under the MIT license." } },
+      { "@type": "Question", "name": "Does Tokenmeter send my usage data anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Local cards only read files your AI tools already write on your computer, there is no analytics or telemetry, and API keys are only sent to that provider's own API." } },
+      { "@type": "Question", "name": "Which AI tools does Tokenmeter support?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code, OpenAI Codex, GitHub Copilot, Gemini CLI and Grok CLI, plus spend and budgets for the Claude (Anthropic), OpenAI and xAI APIs." } },
+      { "@type": "Question", "name": "Does Tokenmeter work on Linux?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. On Debian, Ubuntu and derivatives, install it from the signed Tokenmeter apt repository and it updates with your other system updates. It also runs on Windows and macOS." } },
+      { "@type": "Question", "name": "Can Tokenmeter show Claude Code limits as a percentage?", "acceptedAnswer": { "@type": "Answer", "text": "Anthropic doesn't publish a usage-limit API for Pro and Max plans, so Tokenmeter shows the time left in your current 5-hour session, calculated from your local Claude Code transcripts." } },
+      { "@type": "Question", "name": "Is Tokenmeter an official Anthropic, OpenAI or GitHub product?", "acceptedAnswer": { "@type": "Answer", "text": "No. Tokenmeter is an independent open-source project and isn't affiliated with any of the providers it reads." } }
+    ]
+  }
+  </script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="./" aria-label="Tokenmeter home"><img src="logo.svg" width="28" height="28" alt=""><span>Tokenmeter</span></a>
+    <nav aria-label="Main">
+      <a href="#tools">Tools</a>
+      <a href="#install">Install</a>
+      <a href="#faq">FAQ</a>
+      <a href="https://github.com/mugeshk97/tokenmeter">GitHub</a>
+    </nav>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>See how much of your AI limits you have left, at a glance.</h1>
+      <p class="lead">Tokenmeter is a small always-on-top desktop widget for <strong>Claude Code, Codex, GitHub Copilot, Gemini CLI and Grok</strong>, plus your <strong>Claude, OpenAI and xAI API</strong> budgets. Free and open source, for Linux, Windows and macOS.</p>
+      <div class="cta">
+        <a class="button primary" href="#install">Install Tokenmeter</a>
+        <a class="button" href="https://github.com/mugeshk97/tokenmeter">View on GitHub</a>
+      </div>
+      <figure class="shots">
+        <img src="screenshots/compact-dark.png" width="340" height="564" alt="Tokenmeter in Compact size, dark theme: Codex 29% left this week, Claude Code 2h 6m left in session, Claude API $57.82 left of $100, Copilot 59% premium requests left">
+        <img src="screenshots/normal-light.png" width="340" height="947" alt="Tokenmeter in Normal size, light theme: each card with its limits, bars and key stats" class="second">
+        <figcaption>Compact (dark) and Normal (light), with sample data.</figcaption>
+      </figure>
+    </section>
+
+    <section id="why">
+      <h2>Leads with what's left</h2>
+      <div class="grid three">
+        <div class="point"><h3>What's left, first</h3><p>Every card headlines its tightest limit: “2h 6m left in session”, “29% left this week”, “$57.82 left of $100”.</p></div>
+        <div class="point"><h3>Nearest limit on top</h3><p>Cards sort by how close they are to running out, or drag them into your own order.</p></div>
+        <div class="point"><h3>Red means act</h3><p>Once 80% of a limit is used, the number and bar turn red with a warning icon.</p></div>
+        <div class="point"><h3>Stays out of the way</h3><p>Pinned, it shows only the cards; hover to bring back the controls.</p></div>
+        <div class="point"><h3>Local-first and private</h3><p>Most cards read files your tools already write. No telemetry; keys are encrypted with your system keychain.</p></div>
+        <div class="point"><h3>Keeps itself current</h3><p>Updates through apt on Linux, Homebrew on macOS, and automatically on Windows.</p></div>
+      </div>
+    </section>
+
+    <section id="tools">
+      <h2>Supported AI tools</h2>
+      <div class="grid tools">
+        <div class="tool"><h3>Claude Code</h3><p>Time left in the 5-hour session, session and daily tokens. No setup.</p></div>
+        <div class="tool"><h3>OpenAI Codex</h3><p>5-hour and weekly limits left, with reset times. No setup.</p></div>
+        <div class="tool"><h3>GitHub Copilot</h3><p>Premium requests left and the reset date. Needs a GitHub token.</p></div>
+        <div class="tool"><h3>Gemini CLI</h3><p>Tokens today and over the last 7 days. No setup.</p></div>
+        <div class="tool"><h3>Grok CLI</h3><p>Tokens and cost today and this month, as the CLI reports. No setup.</p></div>
+        <div class="tool"><h3>Claude API</h3><p>Money left of your monthly budget, spend and cache hits. Admin API key.</p></div>
+        <div class="tool"><h3>OpenAI API</h3><p>Money left of your monthly budget, spend, tokens and requests. Admin key.</p></div>
+        <div class="tool"><h3>xAI API</h3><p>Money left of your spending limit, spend and prepaid credit. Management key.</p></div>
+      </div>
+    </section>
+
+    <section id="install">
+      <h2>Install</h2>
+      <div class="grid three installs">
+        <div class="install" id="linux">
+          <h3>Linux</h3>
+          <p>Debian, Ubuntu and derivatives: add the signed apt repository once; updates arrive with your other system updates.</p>
+<pre><code>curl -fsSL https://mugeshk97.github.io/tokenmeter/tokenmeter-archive-keyring.gpg | sudo tee /usr/share/keyrings/tokenmeter-archive-keyring.gpg &gt;/dev/null
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/tokenmeter-archive-keyring.gpg] https://mugeshk97.github.io/tokenmeter stable main" | sudo tee /etc/apt/sources.list.d/tokenmeter.list
+sudo apt update &amp;&amp; sudo apt install tokenmeter</code></pre>
+          <p class="small">Signing key <code>51E7 3671 79B2 798A B250 5D10 7CFF 9452 0564 EA38</code>.</p>
+        </div>
+        <div class="install" id="macos">
+          <h3>macOS</h3>
+          <p>With Homebrew (macOS 13 or newer):</p>
+<pre><code>brew install --cask mugeshk97/tap/tokenmeter</code></pre>
+          <p class="small">Or download the <code>.zip</code> from the <a href="https://github.com/mugeshk97/tokenmeter/releases/latest">latest release</a>. Tokenmeter isn't signed with an Apple Developer ID yet, so on first launch open System Settings → Privacy &amp; Security and click <strong>Open Anyway</strong>.</p>
+        </div>
+        <div class="install" id="windows">
+          <h3>Windows</h3>
+          <p>Download <strong>tokenmeter-…-setup-x64.exe</strong> from the <a href="https://github.com/mugeshk97/tokenmeter/releases/latest">latest release</a> and run it. Tokenmeter then updates itself.</p>
+          <p class="small">The installer isn't code-signed yet, so SmartScreen may warn about an unknown publisher: click <strong>More info → Run anyway</strong>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="privacy">
+      <h2>Private by design</h2>
+      <ul class="checks">
+        <li>Your usage data stays on your computer. No analytics, no telemetry.</li>
+        <li>API keys are encrypted with your system keychain (macOS Keychain, Windows DPAPI, GNOME Keyring or KWallet).</li>
+        <li>Each key is only sent to its own provider's API.</li>
+        <li>Open source under the MIT license: <a href="https://github.com/mugeshk97/tokenmeter">read the code</a>.</li>
+      </ul>
+    </section>
+
+    <section id="faq">
+      <h2>Frequently asked questions</h2>
+      <details><summary>Is Tokenmeter free?</summary><p>Yes. Tokenmeter is free and open source under the MIT license.</p></details>
+      <details><summary>Does Tokenmeter send my usage data anywhere?</summary><p>No. Local cards only read files your AI tools already write on your computer, there is no analytics or telemetry, and API keys are only sent to that provider's own API.</p></details>
+      <details><summary>Which AI tools does Tokenmeter support?</summary><p>Claude Code, OpenAI Codex, GitHub Copilot, Gemini CLI and Grok CLI, plus spend and budgets for the Claude (Anthropic), OpenAI and xAI APIs.</p></details>
+      <details><summary>Does Tokenmeter work on Linux?</summary><p>Yes. On Debian, Ubuntu and derivatives, install it from the signed Tokenmeter apt repository and it updates with your other system updates. It also runs on Windows and macOS.</p></details>
+      <details><summary>Can Tokenmeter show Claude Code limits as a percentage?</summary><p>Anthropic doesn't publish a usage-limit API for Pro and Max plans, so Tokenmeter shows the time left in your current 5-hour session, calculated from your local Claude Code transcripts.</p></details>
+      <details><summary>Is Tokenmeter an official Anthropic, OpenAI or GitHub product?</summary><p>No. Tokenmeter is an independent open-source project and isn't affiliated with any of the providers it reads.</p></details>
+    </section>
+  </main>
+
+  <footer>
+    <p><a href="https://github.com/mugeshk97/tokenmeter">GitHub</a> · <a href="https://github.com/mugeshk97/tokenmeter/releases/latest">Releases</a> · <a href="https://github.com/mugeshk97/tokenmeter/blob/dev/CONTRIBUTING.md">Contributing</a> · <a href="https://github.com/mugeshk97/tokenmeter/blob/dev/LICENSE">MIT license</a></p>
+    <p class="small">Tokenmeter is an independent project, not affiliated with Anthropic, OpenAI, GitHub, Google or xAI.</p>
+  </footer>
+</body>
+</html>

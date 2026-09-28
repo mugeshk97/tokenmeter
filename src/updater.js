@@ -8,7 +8,7 @@
 const fs = require('fs');
 
 const RELEASES_URL = 'https://github.com/mugeshk97/tokenmeter/releases/latest';
-const APT_URL = 'https://mugeshk97.github.io/tokenmeter/'; // apt setup instructions
+const APT_URL = 'https://mugeshk97.github.io/tokenmeter/#linux'; // apt setup instructions
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 const FIRST_CHECK_MS = 15 * 1000;
 

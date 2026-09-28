@@ -1,0 +1,65 @@
+name: pages
+
+# Publishes https://mugeshk97.github.io/tokenmeter/: the landing page (site/) plus the signed apt
+# repository, built from the latest release's .deb. Every deploy replaces the whole site, so both
+# always go out together. Runs after each release (called by release.yml) and when the site changes.
+on:
+  workflow_call:
+  workflow_dispatch:
+  push:
+    branches: [dev]
+    paths:
+      - 'site/**'
+      - 'docs/screenshots/**'
+      - 'assets/logo.svg'
+      - 'packaging/apt/**'
+      - '.github/workflows/pages.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the latest release's .deb
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download -p '*.deb' -D debs
+      - name: Build the signed apt repository
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils
+          export GNUPGHOME=$(mktemp -d)
+          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
+          packaging/apt/build-repo.sh debs apt
+          rm -rf "$GNUPGHOME"
+      - name: Assemble the site
+        run: |
+          mkdir -p _site/screenshots
+          cp -r site/. _site/
+          cp docs/screenshots/*.png _site/screenshots/
+          cp assets/logo.svg _site/
+          cp -r apt/. _site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

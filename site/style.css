@@ -1,0 +1,287 @@
+/* Tokenmeter site: the widget's own colors and system fonts, light and dark. */
+:root {
+  --bg: #f4f5f8;
+  --panel: #ffffff;
+  --border: #e1e4ea;
+  --text: #1b1f27;
+  --muted: #5d6576;
+  --brand: #3b6fe0;
+  --code-bg: #eef0f5;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #262b36;
+    --text: #e7e9ee;
+    --muted: #8d95a7;
+    --brand: #7aa2ff;
+    --code-bg: #1d212a;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', Ubuntu, Cantarell, 'Noto Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--brand);
+}
+
+.top {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 650;
+  font-size: 18px;
+}
+
+nav {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+nav a:hover {
+  color: var(--text);
+}
+
+main {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+section {
+  padding: 48px 0;
+  border-top: 1px solid var(--border);
+}
+
+.hero {
+  border-top: 0;
+  padding-top: 40px;
+  text-align: center;
+}
+
+h1 {
+  font-size: clamp(30px, 5vw, 48px);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  margin: 0 auto 16px;
+  max-width: 820px;
+}
+
+h2 {
+  font-size: 28px;
+  letter-spacing: -0.01em;
+  margin: 0 0 24px;
+}
+
+h3 {
+  font-size: 17px;
+  margin: 0 0 6px;
+}
+
+.lead {
+  font-size: 19px;
+  color: var(--muted);
+  max-width: 720px;
+  margin: 0 auto 28px;
+}
+
+.lead strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.cta {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.button {
+  display: inline-block;
+  padding: 11px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.button.primary {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #0f1115;
+}
+
+.shots {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.shots img {
+  width: 300px;
+  max-width: 100%;
+  height: auto;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 50px rgb(0 0 0 / 0.25);
+}
+
+/* The Normal screenshot is tall: show its top half so the hero stays short. */
+.shots img.second {
+  aspect-ratio: 340 / 564;
+  object-fit: cover;
+  object-position: top;
+}
+
+.shots figcaption {
+  width: 100%;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.grid {
+  display: grid;
+  gap: 16px;
+}
+
+.grid.three {
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.grid.tools {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.point,
+.tool,
+.install {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+}
+
+.point p,
+.tool p,
+.install p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.install p + pre,
+.install pre + p {
+  margin-top: 12px;
+}
+
+.install {
+  min-width: 0;
+}
+
+/* One OS per row: the apt commands are long and should be readable without scrolling. */
+.grid.installs {
+  grid-template-columns: 1fr;
+}
+
+pre {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--code-bg);
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}
+
+.small {
+  font-size: 14px;
+}
+
+.checks {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.checks li {
+  margin: 6px 0;
+}
+
+details {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+}
+
+summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+details p {
+  margin: 10px 0 0;
+  color: var(--muted);
+}
+
+footer {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 20px 48px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  text-align: center;
+}
+
+footer p {
+  margin: 4px 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}

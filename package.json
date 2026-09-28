@@ -15,7 +15,8 @@
     "dist:linux": "electron-builder --linux",
     "dist:win": "electron-builder --win",
     "dist:mac": "electron-builder --mac",
-    "icons": "electron scripts/render-icons.js"
+    "icons": "electron scripts/render-icons.js",
+    "social": "electron scripts/render-social.js"
   },
   "devDependencies": {
     "electron": "^44.4.5",

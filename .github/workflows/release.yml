@@ -1,7 +1,8 @@
 name: release
 
 # Push a tag like v1.2.0 (matching package.json "version") to build every OS, publish the GitHub
-# release the in-app updater reads, and refresh the apt repository on GitHub Pages.
+# release the in-app updater reads, update the Homebrew cask, and refresh the site and apt
+# repository on GitHub Pages (pages.yml).
 on:
   push:
     tags: ['v*']
@@ -128,38 +129,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -am "Tokenmeter $version" && git push
 
-  apt:
-    needs: publish
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Fetch the .deb from the release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release download "$GITHUB_REF_NAME" -p '*.deb' -D debs
-      - name: Build the signed apt repository
-        env:
-          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils
-          export GNUPGHOME=$(mktemp -d)
-          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
-          packaging/apt/build-repo.sh debs site
-          rm -rf "$GNUPGHOME"
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: site
-
+  # Rebuilds the landing page and the apt repository (now with this release's .deb).
   pages:
-    needs: apt
-    runs-on: ubuntu-latest
+    needs: publish
+    uses: ./.github/workflows/pages.yml
+    secrets: inherit
     permissions:
+      contents: read
       pages: write
       id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
-    steps:
-      - id: deploy
-        uses: actions/deploy-pages@v4

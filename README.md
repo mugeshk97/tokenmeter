@@ -6,7 +6,8 @@
 
 <p align="center">
   <strong>See how much of your AI limits you have left, at a glance.</strong><br>
-  A small always-on-top desktop widget for Claude Code, Codex, Copilot, Gemini CLI, Grok and the Claude, OpenAI and xAI APIs.
+  A free, open-source, always-on-top desktop widget for Linux, Windows and macOS that tracks Claude Code, Codex, GitHub Copilot, Gemini CLI, Grok and your Claude, OpenAI and xAI API budgets.<br>
+  <a href="https://mugeshk97.github.io/tokenmeter/">Website</a> · <a href="#install">Install</a> · <a href="https://github.com/mugeshk97/tokenmeter/releases/latest">Download</a>
 </p>
 
 <p align="center">
