@@ -165,10 +165,51 @@ function gripEl() {
   return svg;
 }
 
+/** Warning triangle next to the number when a limit is running low, so it doesn't rely on red alone. */
+function lowIcon() {
+  const svg = icon('M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01');
+  svg.setAttribute('class', 'low-icon');
+  return svg;
+}
+
 function headlineEl(c, d) {
   const t = tightest(c);
+  const low = t ? lowClass(leftOf(t)) : '';
   const label = d === 'compact' ? c.headline.short || c.headline.label : c.headline.label;
-  return el('div', { class: 'headline' }, el('span', { class: `big ${t ? lowClass(leftOf(t)) : ''}`.trim(), text: c.headline.value }), el('span', { class: 'lbl', text: label || '' }));
+  return el(
+    'div',
+    { class: 'headline' },
+    el('span', { class: `big ${low}`.trim() }, low ? lowIcon() : null, c.headline.value, low ? el('span', { class: 'sr-only', text: ' (running low)' }) : null),
+    el('span', { class: 'lbl', text: label || '' })
+  );
+}
+
+/** Errors that need the user (a rejected or missing key) vs ones a retry can fix. */
+function needsKey(err) {
+  return /^(Unauthorized|Forbidden|Token rejected|No .*(key|ID) set|Not found)/i.test(err || '');
+}
+
+/** A way out of an error: open that tool's settings, or try it again now. */
+function errorAction(c) {
+  if (needsKey(c.error)) {
+    return el('button', { class: 'link-btn err-action', text: 'Fix key', 'aria-label': `Fix key for ${c.name}`, onclick: () => openSettings(c.id) });
+  }
+  const b = el('button', {
+    class: 'link-btn err-action',
+    text: 'Retry',
+    'aria-label': `Retry ${c.name}`,
+    onclick: async () => {
+      b.disabled = true;
+      b.textContent = 'Retrying…';
+      try {
+        await api.refresh(c.id);
+      } finally {
+        b.disabled = false;
+        b.textContent = 'Retry';
+      }
+    },
+  });
+  return b;
 }
 
 /** Compact footnote: the error when there is one, otherwise the provider's one-liner. */
@@ -224,6 +265,7 @@ function renderCard(c) {
     if (t) card.append(meterEl(t, false));
     const foot = footEl(c);
     if (foot) card.append(foot);
+    if (c.status === 'error') card.append(errorAction(c));
     return card;
   }
 
@@ -233,7 +275,7 @@ function renderCard(c) {
   if (shownStats.length) card.append(statsEl(shownStats, d === 'normal' ? '1fr' : null));
   if (d === 'detailed') card.append(...sparkEls(c));
 
-  if (c.error) card.append(el('p', { class: 'err', text: c.error }));
+  if (c.error) card.append(el('div', { class: 'err-row' }, el('p', { class: 'err', text: c.error }), errorAction(c)));
   if (d === 'detailed' && c.note) card.append(el('p', { class: 'note', text: c.note }));
   return card;
 }
@@ -295,6 +337,26 @@ function orderedCards() {
   return sortByLimit() ? cards.slice().sort((a, b) => limitKey(a) - limitKey(b)) : cards;
 }
 
+/** Cards that get a tile; tools that aren't set up are folded into one line instead. */
+function shownCards() {
+  return orderedCards().filter((c) => c.status !== 'unconfigured');
+}
+
+/** One line for every tool that isn't set up yet, instead of a card each. */
+function setupRow() {
+  const todo = orderedCards().filter((c) => c.status === 'unconfigured');
+  if (!todo.length) return [];
+  const names = todo.map((c) => c.name).join(', ');
+  return [
+    el(
+      'div',
+      { class: 'setup-row' },
+      el('span', { class: 'setup-text', text: `${todo.length === 1 ? names : `${todo.length} tools`} not set up`, title: names }),
+      el('button', { class: 'link-btn', text: 'Set up', 'aria-label': `Set up ${names}`, onclick: () => openSettings(todo[0].id) })
+    ),
+  ];
+}
+
 function render() {
   // Rebuilding the grid mid-drag would remove the element being dragged; catch up on dragend.
   if (drag.id) {
@@ -303,15 +365,16 @@ function render() {
   }
   if (pinned()) pickerOpen = false;
   const root = $('#cards');
-  const cards = orderedCards();
+  const cards = shownCards();
   const d = density();
   root.className = `cards density-${d}`;
   const tiles = cards.map(renderCard);
-  if (!cards.length) tiles.push(el('div', { class: 'empty', text: 'No tools shown. Use + in the header to add one.' }));
+  const setup = setupRow();
+  if (!cards.length && !setup.length) tiles.push(el('div', { class: 'empty', text: 'No tools shown. Use + in the header to add one.' }));
   // Re-rendering replaces the DOM; keep keyboard focus on the same control.
   const active = root.contains(document.activeElement) ? document.activeElement : null;
   const focusKey = active && [active.closest('[data-id]')?.dataset.id || '', active.className].join('|');
-  root.replaceChildren(...toolPicker(), ...tiles);
+  root.replaceChildren(...toolPicker(), ...tiles, ...setup);
   if (focusKey) {
     const [id, cls] = focusKey.split('|');
     const scope = id ? root.querySelector(`[data-id="${CSS.escape(id)}"]`) : root;
@@ -355,14 +418,15 @@ async function setSortByLimit(on) {
 
 /** Move card `id` to where `targetId` is now, and save that as the custom order. */
 async function moveCard(id, targetId) {
-  const shown = orderedCards().map((c) => c.id);
+  const shown = shownCards().map((c) => c.id);
   const from = shown.indexOf(id);
   const to = shown.indexOf(targetId);
   if (from < 0 || to < 0 || from === to) return;
   shown.splice(from, 1);
   shown.splice(to, 0, id);
   const byId = new Map(state.cards.map((c) => [c.id, c]));
-  state.cards = shown.map((x) => byId.get(x));
+  // Tools that aren't set up keep their place after the shown cards.
+  state.cards = [...shown, ...state.cards.map((c) => c.id).filter((x) => !shown.includes(x))].map((x) => byId.get(x));
   state.meta.sortByLimit = false;
   render();
   // Hidden tools keep their place at the end; config also appends any it doesn't know.
@@ -424,7 +488,7 @@ cardsRoot.addEventListener('keydown', (e) => {
   const card = cardOf(e.target);
   if (!step || !card) return;
   e.preventDefault();
-  const ids = orderedCards().map((c) => c.id);
+  const ids = shownCards().map((c) => c.id);
   const target = ids[ids.indexOf(card.dataset.id) + step];
   if (!target) return;
   const name = (state.cards.find((c) => c.id === card.dataset.id) || {}).name;
@@ -432,6 +496,56 @@ cardsRoot.addEventListener('keydown', (e) => {
     $('#announcer').textContent = `${name} moved to position ${ids.indexOf(target) + 1} of ${ids.length}`;
   });
 });
+
+// ---------- card right-click menu ----------
+// A pointer alternative to dragging and to the hover-only × (also opens with the keyboard menu key).
+cardsRoot.addEventListener('contextmenu', async (e) => {
+  const card = cardOf(e.target);
+  if (!card) return;
+  e.preventDefault();
+  const id = card.dataset.id;
+  const ids = shownCards().map((c) => c.id);
+  const i = ids.indexOf(id);
+  const c = state.cards.find((x) => x.id === id);
+  const oneColumn = getComputedStyle(cardsRoot).gridTemplateColumns.split(' ').length < 2;
+  const action = await api.cardMenu({
+    name: c ? c.name : id,
+    locked: pinned(),
+    canPrev: i > 0,
+    canNext: i >= 0 && i < ids.length - 1,
+    prevLabel: oneColumn ? 'Move up' : 'Move left',
+    nextLabel: oneColumn ? 'Move down' : 'Move right',
+  });
+  if (action === 'prev') moveCard(id, ids[i - 1]);
+  else if (action === 'next') moveCard(id, ids[i + 1]);
+  else if (action === 'hide') hideProvider(id);
+  else if (action === 'open') api.openConsole(id);
+});
+
+// ---------- first-run hint while pinned ----------
+// Pinned is the default, so new users see no settings button: point them at the top bar once.
+{
+  const KEY = 'tokenmeter.pinHintSeen';
+  const hint = $('#pin-hint');
+  let seen = false;
+  try {
+    seen = localStorage.getItem(KEY) === '1';
+  } catch {
+    /* storage unavailable: show the hint this session */
+  }
+  hint.hidden = seen;
+  const dismiss = () => {
+    if (hint.hidden || !pinned()) return;
+    hint.hidden = true;
+    try {
+      localStorage.setItem(KEY, '1');
+    } catch {
+      /* fine: it just shows again next launch */
+    }
+  };
+  $('.topbar').addEventListener('mouseenter', dismiss);
+  $('.topbar').addEventListener('focusin', dismiss);
+}
 
 // ---------- moving the pinned widget ----------
 // Pinned, the top bar isn't a native drag area (so hovering it can reveal the controls);

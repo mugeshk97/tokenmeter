@@ -71,7 +71,7 @@ You can also use environment variables instead: `ANTHROPIC_ADMIN_KEY`, `XAI_MANA
 ## Desktop notes
 
 - **Moving it:** drag the header. The window position and size are remembered.
-- **Pinned (always on top, the default):** the widget shows only the cards, the refresh ring and the refresh button. Hover the top bar (or tab into it) to bring back the other buttons, including the pin to unpin. While pinned, cards can't be hidden or reordered; you can still drag the top bar to move the widget. Unpinning shows everything again; the tray menu's "Always on top" does the same.
+- **Pinned (always on top, the default):** the widget shows only the cards, the refresh ring and the refresh button. On first launch a hint in the top bar points this out. Hover the top bar (or tab into it) to bring back the other buttons, including the pin to unpin. While pinned, cards can't be hidden or reordered; you can still drag the top bar to move the widget. Unpinning shows everything again; the tray menu's "Always on top" does the same.
 - **Closing it:** × hides the widget to the tray (the menu bar on macOS). The tray menu has Show/Hide, Refresh, Always on top, Start at login, Settings and Quit. Launching the app again also brings the widget back.
 - **GNOME tray icon (Linux):** GNOME needs the *AppIndicator and KStatusNotifierItem Support* extension to show it. Ubuntu ships this by default.
 - **Wayland (Linux):** native Wayland apps can't keep themselves on top or choose their position. The app therefore runs through XWayland by default ("Use XWayland on Wayland" in Settings).
@@ -83,6 +83,10 @@ You can also use environment variables instead: `ANTHROPIC_ADMIN_KEY`, `XAI_MANA
 - **Refresh ring:** the small ring next to the name fills until the next API refresh; hover or tab to it for the exact times.
 - **Status dot:** a card only shows a dot when something needs attention: red when its last refresh failed, grey when it isn't set up yet.
 - **Adding and hiding tools:** hover a card and click × to hide it. The + button in the header lists hidden tools at the top of the widget; click one to bring it back. The button is greyed out when every tool is shown. Settings still has a "Show on widget" checkbox for each tool.
+- **Card menu:** right-click a card (or press the keyboard menu key on it) to move it left or right, hide it, or open its usage page, without dragging.
+- **Tools not set up** are listed on one line at the bottom ("OpenAI API not set up · Set up") instead of taking a card each.
+- **Errors:** a failed card says why and offers a way out: **Retry** for temporary failures (network, rate limit) or **Fix key** when a key was rejected or is missing.
+- **Running low:** once 80% of a limit is used, the number turns red and gets a warning icon.
 
 ## What the numbers mean (and their limits)
 

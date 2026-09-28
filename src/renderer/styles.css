@@ -1102,3 +1102,73 @@ select {
   cursor: default;
 }
 
+/* One-time hint for the pinned top bar (app.js "first-run hint"). */
+.pin-hint {
+  display: none;
+  font-size: var(--text-xs);
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.pinned .topbar:not(:hover):not(:focus-within) .pin-hint:not([hidden]) {
+  display: inline;
+}
+
+/* Error with a way out: Retry, or Fix key for a rejected key. */
+.err-row {
+  display: flex;
+  flex-direction: column; /* button under the message: side by side squeezes it in narrow cards */
+  align-items: flex-start;
+  gap: var(--sp-6);
+}
+
+.err-action {
+  flex: none;
+  font-size: var(--text-xs);
+  padding: 2px var(--sp-8);
+}
+
+.card-compact .err-action {
+  align-self: flex-start;
+  margin-top: var(--sp-4);
+}
+
+.pinned .err-action,
+.pinned .setup-row {
+  display: none;
+}
+
+/* Tools that aren't set up: one line instead of a card each. */
+.setup-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  padding: var(--sp-6) var(--sp-10);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.setup-text {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Running low: a warning icon beside the red number. */
+.low-icon {
+  width: 0.72em;
+  height: 0.72em;
+  margin-right: 0.18em;
+  vertical-align: 0.02em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+

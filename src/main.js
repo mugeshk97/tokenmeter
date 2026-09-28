@@ -447,6 +447,36 @@ function registerIpc() {
       dragFrom = null;
     }
   });
+  // Right-click menu on a card: a pointer alternative to dragging and the hover-only × button.
+  ipcMain.handle(
+    'card:menu',
+    guard((opts) => {
+      const o = opts && typeof opts === 'object' ? opts : {};
+      const name = String(o.name || 'tool').slice(0, 60);
+      return new Promise((resolve) => {
+        let done = false;
+        const finish = (action) => {
+          if (!done) {
+            done = true;
+            resolve(action);
+          }
+        };
+        const items = [];
+        if (!o.locked) {
+          items.push(
+            { label: String(o.prevLabel || 'Move left').slice(0, 20), enabled: Boolean(o.canPrev), click: () => finish('prev') },
+            { label: String(o.nextLabel || 'Move right').slice(0, 20), enabled: Boolean(o.canNext), click: () => finish('next') },
+            { type: 'separator' },
+            { label: `Hide ${name}`, click: () => finish('hide') },
+            { type: 'separator' }
+          );
+        }
+        items.push({ label: 'Open usage page', click: () => finish('open') });
+        // The close callback can fire before a click is delivered; give the click a moment first.
+        Menu.buildFromTemplate(items).popup({ window: win, callback: () => setTimeout(() => finish(null), 100) });
+      });
+    })
+  );
   ipcMain.handle(
     'open:console',
     guard((id) => {
