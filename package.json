@@ -14,7 +14,8 @@
     "dist": "electron-builder",
     "dist:linux": "electron-builder --linux",
     "dist:win": "electron-builder --win",
-    "dist:mac": "electron-builder --mac"
+    "dist:mac": "electron-builder --mac",
+    "icons": "electron scripts/render-icons.js"
   },
   "devDependencies": {
     "electron": "^44.4.5",
@@ -72,7 +73,7 @@
         }
       ],
       "category": "public.app-category.utilities",
-      "icon": "assets/icon512.png",
+      "icon": "assets/icon1024.png",
       "identity": "-",
       "hardenedRuntime": false,
       "extendInfo": {

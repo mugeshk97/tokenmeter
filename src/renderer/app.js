@@ -238,21 +238,6 @@ function renderCard(c) {
   return card;
 }
 
-/** Everything about a card, for the hover peek over Compact and Normal tiles. */
-function fillPeek(node, c) {
-  node.dataset.status = c.status;
-  const head = el(
-    'header',
-    { class: 'card-head' },
-    el('span', { class: 'status-dot' }),
-    el('span', { class: 'card-name', text: c.name }),
-    el('span', { class: 'card-kind', text: c.kind === 'local' ? 'local' : 'api' }),
-    el('span', { class: 'card-age', text: ageText(c) })
-  );
-  const stats = c.stats || [];
-  node.replaceChildren(head, ...(c.meters || []).map((m) => meterEl(m)), stats.length ? statsEl(stats) : '', ...sparkEls(c), c.error ? el('p', { class: 'err', text: c.error }) : '');
-}
-
 function hiddenTools() {
   return (state.meta.providers || []).filter((p) => !p.enabled);
 }
@@ -344,7 +329,6 @@ function render() {
   // The visible text is the name and the state ("Nearest limit" / "Custom order"), so no aria-pressed.
   $('#btn-sort').dataset.on = String(sorted);
   $('#sort-label').textContent = sorted ? 'Nearest limit' : 'Custom order';
-  if (peek.id && !$('#peek').hidden) placePeek(); // keep an open peek in step with new data
   scheduleFit();
   for (const b of document.querySelectorAll('#density button')) {
     const on = b.dataset.density === d;
@@ -403,7 +387,6 @@ cardsRoot.addEventListener('dragstart', (e) => {
   drag.id = card.dataset.id;
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', drag.id);
-  hidePeek();
   card.classList.add('dragging');
 });
 cardsRoot.addEventListener('dragover', (e) => {
@@ -443,64 +426,6 @@ cardsRoot.addEventListener('keydown', (e) => {
   });
 });
 
-// ---------- hover peek ----------
-const PEEK_DELAY = 380;
-const peek = { id: null, timer: 0 };
-
-function hidePeek() {
-  clearTimeout(peek.timer);
-  peek.id = null;
-  $('#peek').hidden = true;
-}
-
-/** Fill the peek for peek.id and float it below the tile (upper half) or above it (lower half). */
-function placePeek() {
-  const node = $('#peek');
-  const c = (state.cards || []).find((x) => x.id === peek.id);
-  const tile = c && cardsRoot.querySelector(`.card[data-id="${CSS.escape(c.id)}"]`);
-  if (!tile || settingsOpen) return hidePeek();
-  fillPeek(node, c);
-  node.hidden = false;
-  const r = tile.getBoundingClientRect();
-  const h = node.offsetHeight;
-  const gap = 6;
-  const min = cardsRoot.getBoundingClientRect().top;
-  const max = window.innerHeight - gap;
-  let top = r.top + r.height / 2 < (min + max) / 2 ? r.bottom + gap : r.top - gap - h;
-  // Keep it inside the window, even if that means covering the hovered tile.
-  top = Math.max(min, Math.min(top, max - h));
-  node.style.top = `${Math.round(top)}px`;
-}
-
-/** Open the peek for a tile after a short pause (mouse hover or keyboard focus). */
-function schedulePeek(card) {
-  if (!card || card.dataset.id === peek.id) return;
-  hidePeek();
-  const c = (state.cards || []).find((x) => x.id === card.dataset.id);
-  if (!c || density() === 'detailed' || drag.id || c.status === 'unconfigured' || !c.headline) return;
-  peek.id = c.id;
-  $('#peek').hidden = true;
-  peek.timer = setTimeout(() => {
-    if (peek.id === c.id && !drag.id) placePeek();
-  }, PEEK_DELAY);
-}
-
-cardsRoot.addEventListener('mouseover', (e) => schedulePeek(cardOf(e.target)));
-// Keyboard users get the same detail when a card's name button has focus.
-cardsRoot.addEventListener('focusin', (e) => {
-  if (e.target.matches('.card-name')) schedulePeek(cardOf(e.target));
-});
-cardsRoot.addEventListener('focusout', (e) => {
-  if (cardOf(e.target) !== cardOf(e.relatedTarget)) hidePeek();
-});
-cardsRoot.addEventListener('mouseout', (e) => {
-  const from = cardOf(e.target);
-  const to = cardOf(e.relatedTarget);
-  if (from && from !== to && !(to && to.dataset.id === from.dataset.id)) hidePeek();
-});
-cardsRoot.addEventListener('scroll', hidePeek);
-window.addEventListener('blur', hidePeek);
-
 // ---------- window fits its content ----------
 let fitTimer = 0;
 
@@ -534,7 +459,6 @@ function scheduleFit() {
 }
 
 async function setDensity(d) {
-  hidePeek();
   state.meta.density = d; // instant feedback; main confirms via state:update
   render();
   fitNow(); // resize in the same frame as the new layout instead of 30ms later
@@ -664,7 +588,6 @@ async function openSettings(focusId) {
 
   buildProviderFields(settingsData);
   settingsOpen = true;
-  hidePeek();
   $('#toolbar').hidden = true;
   $('#cards').hidden = true;
   $('#settings').hidden = false;
@@ -761,8 +684,7 @@ $('#btn-cancel').addEventListener('click', closeSettings);
 $('#settings-form').opacity.addEventListener('input', showOpacity);
 $('#settings-form').addEventListener('submit', saveSettings);
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && !$('#peek').hidden) hidePeek();
-  else if (e.key === 'Escape' && settingsOpen) closeSettings();
+  if (e.key === 'Escape' && settingsOpen) closeSettings();
   else if (e.key === 'Escape' && pickerOpen) {
     togglePicker(false);
     $('#btn-add').focus();

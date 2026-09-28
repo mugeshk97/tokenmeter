@@ -254,23 +254,30 @@ function trayTooltip(cards) {
 }
 
 /**
- * Tray icon at the size each OS draws it: 16px on Windows, 18pt in the macOS menu bar,
- * 22px on Linux panels. The 2x version keeps it sharp on HiDPI screens.
+ * One-color tray mark at the size each OS draws it: 16px on Windows, 18pt in the macOS menu bar,
+ * 22px on Linux panels, with a 2x version for HiDPI screens.
+ * - macOS: black template image; the menu bar recolors it for light and dark.
+ * - Windows: follows the taskbar's light/dark theme.
+ * - Linux: white; most panels (GNOME's top bar included) are dark even in light mode.
  */
 function trayImage() {
+  const tone = process.platform === 'darwin' ? 'black' : process.platform === 'win32' && !nativeTheme.shouldUseDarkColorsForSystemIntegratedUI ? 'black' : 'white';
   const size = { win32: 16, darwin: 18 }[process.platform];
-  if (!size) return nativeImage.createFromPath(path.join(ASSETS, 'tray.png')); // picks tray@2x.png itself
+  if (!size) return nativeImage.createFromPath(path.join(ASSETS, `tray-${tone}.png`)); // picks the @2x file itself
   const img = nativeImage.createEmpty();
-  for (const [file, scaleFactor] of [['tray.png', 1], ['tray@2x.png', 2]]) {
+  for (const [file, scaleFactor] of [[`tray-${tone}.png`, 1], [`tray-${tone}@2x.png`, 2]]) {
     const src = nativeImage.createFromPath(path.join(ASSETS, file)).resize({ width: size * scaleFactor, height: size * scaleFactor, quality: 'best' });
     img.addRepresentation({ scaleFactor, width: size * scaleFactor, height: size * scaleFactor, buffer: src.toPNG() });
   }
+  if (process.platform === 'darwin') img.setTemplateImage(true);
   return img;
 }
 
 function createTray() {
   try {
     tray = new Tray(trayImage());
+    // Windows: redraw the icon when the taskbar switches between light and dark.
+    if (process.platform === 'win32') nativeTheme.on('updated', () => tray && tray.setImage(trayImage()));
     tray.setToolTip('Tokenmeter');
     tray.on('click', toggleWindow);
     buildTrayMenu();

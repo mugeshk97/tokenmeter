@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" color="#000000">
+  <!-- One-color tray mark: the dial without its tile. scripts/render-icons.js renders it black and white. -->
+  <g transform="translate(16 16) scale(1.22) translate(-16 -16)">
+    <g transform="rotate(135 16 17.5)" fill="none" stroke-width="4.2" stroke-linecap="round">
+      <circle cx="16" cy="17.5" r="9.5" pathLength="100" stroke="currentColor" stroke-opacity="0.3" stroke-dasharray="75 25"/>
+      <circle cx="16" cy="17.5" r="9.5" pathLength="100" stroke="currentColor" stroke-dasharray="48 52"/>
+    </g>
+    <circle cx="16" cy="17.5" r="2.6" fill="currentColor"/>
+  </g>
+</svg>

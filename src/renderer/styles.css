@@ -39,6 +39,7 @@
   --warn: #e8b04b;
   --bad: #ef6b6b;
   --good: #4cc38a;
+  --brand: #7aa2ff; /* product color: logo, card strips, bars */
   --focus: #7aa2ff;
   --on-focus: #0f1115;
   --press: color-mix(in srgb, var(--text) 10%, transparent);
@@ -57,7 +58,8 @@
     --track: #e7eaf0;
     --warn: #96600f;
     --bad: #c53030;
-    --good: #26875a; /* 3.7:1 against --track, so bars stay readable */
+    --good: #26875a;
+    --brand: #3b6fe0; /* darker in light mode: 3.8:1 against --track */
     --focus: #3b6fe0;
     --on-focus: #ffffff;
     color-scheme: light;
@@ -147,11 +149,10 @@ button {
 }
 
 .logo {
+  /* Brand mark (assets/logo.svg): the dial on the brand-blue tile. */
   width: 18px;
   height: 18px;
-  border-radius: var(--radius-sm);
-  /* Brand mark: the provider accent colors, intentionally literal. */
-  background: conic-gradient(#d97757 0 25%, #b28cff 0 50%, #6ea8fe 0 75%, #e8a87c 0);
+  display: block;
   flex: none;
 }
 
@@ -369,7 +370,7 @@ button {
 }
 
 .card {
-  --accent: var(--good); /* one product color for every tool */
+  --accent: var(--brand); /* one product color for every tool */
   position: relative;
   min-width: 0;
   background:
@@ -388,10 +389,6 @@ button {
 .card[data-status='unconfigured'] {
   background: transparent;
   border-style: dashed;
-}
-
-.card[data-status='unconfigured']::before {
-  opacity: 0.35;
 }
 
 /* Drag to reorder */
@@ -416,25 +413,6 @@ button {
 
 .card:not(.card-compact):hover .grip {
   opacity: 1;
-}
-
-.card:not(.card-compact):hover::before {
-  opacity: 0; /* the grip takes the accent strip's place */
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  margin: var(--sp-10) 0;
-  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
-  background: var(--accent);
-}
-
-.card:hover,
-.card:focus-within {
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
 }
 
 .card-head {
@@ -723,10 +701,6 @@ button {
   border-radius: var(--sp-10);
 }
 
-.card-compact::before {
-  margin: 9px 0;
-}
-
 .card-compact .card-name {
   min-height: 20px;
   font-size: var(--text-xs);
@@ -790,26 +764,6 @@ button {
   padding: 3px var(--sp-8);
 }
 
-/* ---- Hover peek: the full card, floated above or below the hovered tile ---- */
-.peek {
-  position: fixed;
-  left: 9px; /* body border + grid padding */
-  right: 9px;
-  z-index: 5;
-  pointer-events: none;
-  cursor: default;
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
-  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.25);
-}
-
-.peek::before {
-  display: none;
-}
-
-.peek .card-head {
-  padding-right: 0;
-}
-
 .skeleton {
   height: 12px;
   border-radius: var(--radius-xs);
@@ -849,7 +803,7 @@ button {
 }
 
 .pick {
-  --accent: var(--good); /* one product color for every tool */
+  --accent: var(--brand); /* one product color for every tool */
   min-height: 32px;
   display: flex;
   align-items: center;

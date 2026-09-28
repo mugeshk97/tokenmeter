@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Tokenmeter mark (design 3a): a dial about half full, on the brand-blue tile. -->
+  <rect width="32" height="32" rx="7.5" fill="#7aa2ff"/>
+  <g transform="rotate(135 16 17.5)" fill="none" stroke-width="4.2" stroke-linecap="round">
+    <circle cx="16" cy="17.5" r="9.5" pathLength="100" stroke="#15171c" stroke-opacity="0.22" stroke-dasharray="75 25"/>
+    <circle cx="16" cy="17.5" r="9.5" pathLength="100" stroke="#15171c" stroke-dasharray="48 52"/>
+  </g>
+  <circle cx="16" cy="17.5" r="2.6" fill="#15171c"/>
+</svg>
