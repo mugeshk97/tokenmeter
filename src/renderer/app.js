@@ -384,6 +384,7 @@ function render() {
   }
 
   tickRing();
+  renderUpdate();
   $('#btn-pin').setAttribute('aria-pressed', String(Boolean(state.meta.alwaysOnTop)));
   // Pinned: a glanceable, locked widget. Only the cards, the refresh ring and refresh show;
   // hovering or tabbing into the top bar brings the other controls back (styles.css, "Pinned").
@@ -582,6 +583,22 @@ cardsRoot.addEventListener('contextmenu', async (e) => {
   bar.addEventListener('pointercancel', stop);
 }
 
+// ---------- update button (header) ----------
+/** Shows in the ring's place while an update is ready to install or available to download. */
+function renderUpdate() {
+  const u = state.meta.update;
+  const btn = $('#btn-update');
+  const show = Boolean(u && u.version && (u.status === 'ready' || u.status === 'available'));
+  btn.hidden = !show;
+  $('#refresh-ring').hidden = show;
+  if (!show) return;
+  const label = u.status === 'ready' ? `Update ${u.version} is ready. Click to restart and install it.` : `Update ${u.version} is available. Click to open the download page.`;
+  btn.title = label;
+  btn.setAttribute('aria-label', label);
+}
+
+$('#btn-update').addEventListener('click', () => api.updateAct());
+
 // ---------- refresh countdown ring (header) ----------
 function inWords(ms) {
   const s = Math.max(0, Math.round(ms / 1000));
@@ -761,6 +778,7 @@ async function openSettings(focusId) {
   showOpacity();
   f.theme.value = c.theme || 'system';
   f.autoFit.checked = c.autoFit !== false;
+  f.autoUpdate.checked = c.autoUpdate !== false;
 
   const enc = settingsData.encryption;
   const encEl = $('#enc-status');
@@ -814,6 +832,7 @@ async function saveSettings(e) {
     opacity: Number(f.opacity.value) || 1,
     theme: f.theme.value,
     autoFit: f.autoFit.checked,
+    autoUpdate: f.autoUpdate.checked,
     providers: {},
   };
   const secrets = { ...pendingSecrets };

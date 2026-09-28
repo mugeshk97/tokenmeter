@@ -21,6 +21,10 @@
         <div class="brand-text">
           <h1 class="app-title">Tokenmeter</h1>
           <!-- Fills toward the next API refresh; the exact times are in its tooltip and label. -->
+          <!-- Replaces the ring while an update is waiting (src/updater.js). -->
+          <button id="btn-update" class="icon update" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" /><path d="M12 7.5v8M8.5 12l3.5 3.5 3.5-3.5" /></svg>
+          </button>
           <span id="refresh-ring" class="ring" tabindex="0" role="img" aria-label="Waiting for data">
             <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
               <circle class="ring-track" cx="8" cy="8" r="6" />
@@ -78,6 +82,7 @@
           </label>
           <label class="check"><input type="checkbox" name="alwaysOnTop" /> Always on top</label>
           <label class="check"><input type="checkbox" name="autoFit" /> Fit window height to its content</label>
+          <label class="check"><input type="checkbox" name="autoUpdate" /> Install updates automatically</label>
           <label class="check"><input type="checkbox" name="startAtLogin" /> Start at login</label>
           <label class="check"><input type="checkbox" name="forceX11" /> Use XWayland on Wayland (needed for always-on-top; restart to apply)</label>
           <label class="row">Theme

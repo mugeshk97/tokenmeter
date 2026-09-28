@@ -175,6 +175,18 @@ button {
   text-overflow: ellipsis; /* the header is full at narrow widths */
 }
 
+/* Update waiting: takes the ring's place */
+.icon.update {
+  -webkit-app-region: no-drag;
+  width: 20px;
+  height: 20px;
+  color: var(--brand);
+}
+
+.icon.update:hover {
+  color: var(--brand);
+}
+
 /* Countdown to the next API refresh */
 .ring {
   -webkit-app-region: no-drag; /* the header is a drag handle, which would swallow hover */

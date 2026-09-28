@@ -81,7 +81,17 @@
       }
     },
     "artifactName": "${name}-${version}-${arch}.${ext}",
-    "publish": null
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "mugeshk97",
+        "repo": "tokenmeter",
+        "releaseType": "release"
+      }
+    ]
   },
-  "homepage": "https://github.com/mugeshk97"
+  "homepage": "https://github.com/mugeshk97",
+  "dependencies": {
+    "electron-updater": "^6.8.9"
+  }
 }

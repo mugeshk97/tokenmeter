@@ -7,6 +7,7 @@ const { Store, readConfigSync } = require('./config');
 const { Poller } = require('./poller');
 const { PROVIDERS } = require('./providers');
 const { setAutostart } = require('./autostart');
+const { Updater } = require('./updater');
 
 const ASSETS = path.join(__dirname, '..', 'assets');
 const MIN_HEIGHT = 110;
@@ -52,6 +53,7 @@ if (!app.requestSingleInstanceLock()) {
 
 let store;
 let poller;
+let updater = null; // only in the packaged app
 let win = null;
 let tray = null;
 let quitting = false;
@@ -63,6 +65,7 @@ function meta() {
     pollMinutes: store.config.pollMinutes,
     density: store.config.density,
     sortByLimit: store.config.sortByLimit !== false,
+    update: updater ? updater.state : null,
     schedule: poller ? poller.schedule() : null,
     autoFit: store.config.autoFit !== false,
     demo: DEMO,
@@ -220,6 +223,15 @@ function buildTrayMenu() {
     Menu.buildFromTemplate([
       { label: visible ? 'Hide widget' : 'Show widget', click: toggleWindow },
       { label: 'Refresh now', click: () => poller.refresh() },
+      ...(updater
+        ? [
+            updater.state.status === 'ready'
+              ? { label: `Restart to update to ${updater.state.version}`, click: () => updater.act() }
+              : updater.state.status === 'available'
+                ? { label: `Download update ${updater.state.version}…`, click: () => updater.act() }
+                : { label: 'Check for updates', enabled: updater.state.status !== 'checking' && updater.state.status !== 'downloading', click: () => updater.check() },
+          ]
+        : []),
       { type: 'separator' },
       { label: 'Always on top', type: 'checkbox', checked: Boolean(store.config.alwaysOnTop), click: (m) => setAlwaysOnTop(m.checked) },
       {
@@ -477,6 +489,8 @@ function registerIpc() {
       });
     })
   );
+  // Header update button: restart into a downloaded update, or open the download page.
+  ipcMain.handle('update:act', guard(() => updater && updater.act()));
   ipcMain.handle(
     'open:console',
     guard((id) => {
@@ -521,6 +535,17 @@ app.whenReady().then(() => {
   }
 
   registerIpc();
+  if (app.isPackaged && !DEMO && !SCREENSHOT) {
+    updater = new Updater({
+      getAutoInstall: () => store.config.autoUpdate !== false,
+      onChange: () => {
+        pushState();
+        buildTrayMenu();
+      },
+      openExternal: (url) => shell.openExternal(url),
+    });
+    updater.start();
+  }
   createWindow();
   if (!SCREENSHOT) createTray();
   if (!DEMO) poller.start();
@@ -531,6 +556,7 @@ app.whenReady().then(() => {
 app.on('before-quit', () => {
   quitting = true;
   if (poller) poller.stop();
+  if (updater) updater.stop();
 });
 
 // Keep running in the tray when the window is hidden.

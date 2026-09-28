@@ -12,6 +12,7 @@ const DEFAULTS = {
   theme: 'system',
   density: 'normal', // compact | normal | detailed
   autoFit: true, // window height follows its content
+  autoUpdate: true, // download and install updates where the install allows it (src/updater.js)
   sortByLimit: true, // cards closest to a limit first; dragging a card switches to `order`
   order: ['claudeCode', 'codex', 'grokCli', 'copilot', 'geminiCli', 'anthropic', 'xai', 'openai'],
   providers: {

@@ -492,3 +492,47 @@ test('expandHome: ~ followed by / or \\ (Windows), nothing else', () => {
   assert.equal(expandHome('~other/x'), '~other/x');
   assert.equal(expandHome('/abs/~/x'), '/abs/~/x');
 });
+
+// ---------------------------------------------------------------- Updater
+const { EventEmitter } = require('events');
+const { Updater, updateMode, RELEASES_URL } = require('../src/updater');
+
+test('updateMode: self-updating installs vs notify-only', () => {
+  assert.equal(updateMode({ platform: 'win32' }), 'auto');
+  assert.equal(updateMode({ platform: 'linux', appImage: '/tmp/Tokenmeter.AppImage' }), 'auto');
+  assert.equal(updateMode({ platform: 'linux' }), 'notify'); // .deb
+  assert.equal(updateMode({ platform: 'darwin' }), 'notify'); // unsigned Mac
+  assert.equal(updateMode({ platform: 'win32', autoInstall: false }), 'notify');
+});
+
+test('updater: downloads when it can install, otherwise points at the release page', async () => {
+  const fake = () => Object.assign(new EventEmitter(), { downloads: 0, installs: 0, checkForUpdates: async () => {}, downloadUpdate() { this.downloads++; return Promise.resolve(); }, quitAndInstall() { this.installs++; }, setFeedURL() {} });
+  const platform = Object.getOwnPropertyDescriptor(process, 'platform');
+  const states = [];
+  const opened = [];
+  try {
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    const au = fake();
+    const u = new Updater({ getAutoInstall: () => true, onChange: (s) => states.push(s.status), openExternal: (url) => opened.push(url), autoUpdater: au });
+    au.emit('update-available', { version: '1.1.0' });
+    assert.equal(au.downloads, 1);
+    au.emit('update-downloaded', { version: '1.1.0' });
+    assert.equal(u.state.status, 'ready');
+    au.emit('error', new Error('offline')); // a later failed check keeps the downloaded update
+    assert.equal(u.state.status, 'ready');
+    u.act();
+    assert.equal(au.installs, 1);
+
+    Object.defineProperty(process, 'platform', { value: 'darwin' });
+    const au2 = fake();
+    const u2 = new Updater({ getAutoInstall: () => true, onChange: () => {}, openExternal: (url) => opened.push(url), autoUpdater: au2 });
+    au2.emit('update-available', { version: '1.1.0' });
+    assert.equal(au2.downloads, 0);
+    assert.equal(u2.state.status, 'available');
+    u2.act();
+    assert.deepEqual(opened, [RELEASES_URL]);
+  } finally {
+    Object.defineProperty(process, 'platform', platform);
+  }
+  assert.deepEqual(states, ['downloading', 'ready']);
+});

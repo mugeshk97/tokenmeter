@@ -50,6 +50,15 @@ Then tick **Start at login** in Settings (or the tray menu). On Linux this write
 
 Local tool folders are the same on every OS, under your home folder (`~/.claude`, `~/.codex`, `~/.grok`, `~/.gemini`, e.g. `C:\Users\you\.codex` on Windows).
 
+**Updates:** the app checks GitHub Releases 15 seconds after it starts and every 6 hours after that (tray menu: **Check for updates**). When a newer version is out, an update icon takes the refresh ring's place in the header.
+
+| Install | What happens |
+|---|---|
+| Windows installer, Linux AppImage | Downloads in the background and installs when you quit (or click the update icon to restart now) |
+| Linux `.deb`, macOS | The update icon opens the download page (the `.deb` would need a root password; macOS needs a signed app to update itself) |
+
+Turn off **Install updates automatically** in Settings to always just be told.
+
 **Icons:** each OS gets its own icon file, drawn from `assets/logo.svg` at every size so small icons stay sharp: `assets/icons/linux/` (16–512px PNGs), `assets/icon.ico` (Windows, 16–256px) and `assets/icon.icns` (macOS, 16–1024px with retina sizes). After editing the SVG, run `npm run icons` to regenerate them.
 
 ## Getting the keys
