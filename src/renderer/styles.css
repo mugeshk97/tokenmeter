@@ -415,9 +415,8 @@ button {
   --tile-min: 150px;
   position: relative;
   flex: 1;
-  overflow-y: auto;
-  scrollbar-gutter: stable; /* a scrollbar appearing mid-resize must not reflow the grid */
-  padding: var(--sp-8) 0 var(--sp-8) var(--sp-8); /* the 8px gutter is the right-hand padding */
+  overflow-y: auto; /* scrolls (wheel, keys) only when taller than the screen; no visible bar */
+  padding: var(--sp-8);
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(var(--tile-min), 1fr));
   align-content: start;
@@ -432,15 +431,15 @@ button {
   --tile-min: 260px;
 }
 
-.cards::-webkit-scrollbar,
-.settings::-webkit-scrollbar {
-  width: 8px;
+/* No scroll bars: the window fits its content; anything taller than the screen still scrolls. */
+.cards,
+.settings {
+  scrollbar-width: none;
 }
 
-.cards::-webkit-scrollbar-thumb,
-.settings::-webkit-scrollbar-thumb {
-  background: var(--track);
-  border-radius: var(--radius-md);
+.cards::-webkit-scrollbar,
+.settings::-webkit-scrollbar {
+  display: none;
 }
 
 .card {
