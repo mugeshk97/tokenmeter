@@ -36,7 +36,7 @@
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" /></svg>
         </button>
         <button id="btn-pin" class="icon" title="Always on top" aria-label="Always on top" aria-pressed="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 3h6l-1 6 4 4H6l4-4-1-6zM12 13v8" /></svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" /></svg>
         </button>
         <button id="btn-settings" class="icon" title="Settings" aria-label="Settings">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>
@@ -51,13 +51,19 @@
 
     <div id="toolbar" class="toolbar">
       <div id="density" class="seg" role="radiogroup" aria-label="Card size">
-        <button type="button" role="radio" data-density="compact" aria-checked="false">Compact</button>
-        <button type="button" role="radio" data-density="normal" aria-checked="true">Normal</button>
-        <button type="button" role="radio" data-density="detailed" aria-checked="false">Detailed</button>
+        <button type="button" role="radio" data-density="compact" aria-checked="false" aria-label="Compact" title="Compact">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="3.5" width="4.5" height="4.5" rx="1" /><rect x="9.75" y="3.5" width="4.5" height="4.5" rx="1" /><rect x="16" y="3.5" width="4.5" height="4.5" rx="1" /><rect x="3.5" y="9.75" width="4.5" height="4.5" rx="1" /><rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1" /><rect x="16" y="9.75" width="4.5" height="4.5" rx="1" /><rect x="3.5" y="16" width="4.5" height="4.5" rx="1" /><rect x="9.75" y="16" width="4.5" height="4.5" rx="1" /><rect x="16" y="16" width="4.5" height="4.5" rx="1" /></svg>
+        </button>
+        <button type="button" role="radio" data-density="normal" aria-checked="true" aria-label="Normal" title="Normal">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></svg>
+        </button>
+        <button type="button" role="radio" data-density="detailed" aria-checked="false" aria-label="Detailed" title="Detailed">
+          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="16" height="7" rx="1.5" /><rect x="4" y="13" width="16" height="7" rx="1.5" /></svg>
+        </button>
       </div>
-      <button type="button" id="btn-sort" class="sort" data-on="true" title="Order cards by the limit closest to running out. Drag a card (or Alt+arrow keys) to set your own order.">
-        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M7 12h10M10 17h4" /></svg>
-        <span id="sort-label">Nearest limit</span>
+      <!-- On: cards closest to a limit come first. Off: your own (dragged) order. -->
+      <button type="button" id="btn-sort" class="sort" aria-pressed="true" aria-label="Sort by nearest limit">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 16 4 4 4-4M7 20V4M11 4h10M11 8h7M11 12h4" /></svg>
       </button>
     </div>
 

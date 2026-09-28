@@ -298,14 +298,16 @@ button {
 }
 
 .seg button {
+  width: 28px;
   height: 22px;
-  padding: 0 9px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
   border: 0;
   border-radius: 4px;
   background: transparent;
   color: var(--muted);
-  font-size: var(--text-xs);
   cursor: pointer;
 }
 
@@ -316,22 +318,32 @@ button {
 .seg button[aria-checked='true'] {
   background: var(--panel);
   color: var(--text);
-  font-weight: 600;
   box-shadow: var(--shadow-sm);
 }
 
+.seg svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+.seg button[aria-checked='true'] svg {
+  fill: currentColor;
+  fill-opacity: 0.25;
+}
+
 .sort {
-  height: 26px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 0 var(--sp-8) 0 var(--sp-6);
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--muted);
-  font-size: var(--text-xs);
-  white-space: nowrap;
   cursor: pointer;
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease;
 }
@@ -340,19 +352,20 @@ button {
   color: var(--text);
 }
 
-.sort[data-on='true'] {
+.sort[aria-pressed='true'] {
   background: color-mix(in srgb, var(--focus) 14%, transparent);
   border-color: color-mix(in srgb, var(--focus) 40%, var(--border));
   color: var(--focus);
 }
 
 .sort svg {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
   stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 /* ---- Cards grid ---- */

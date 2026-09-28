@@ -325,9 +325,9 @@ function render() {
   add.setAttribute('aria-expanded', String(pickerOpen));
   $('#demo-banner').hidden = !state.meta.demo;
   const sorted = sortByLimit();
-  // The visible text is the name and the state ("Nearest limit" / "Custom order"), so no aria-pressed.
-  $('#btn-sort').dataset.on = String(sorted);
-  $('#sort-label').textContent = sorted ? 'Nearest limit' : 'Custom order';
+  const sortBtn = $('#btn-sort');
+  sortBtn.setAttribute('aria-pressed', String(sorted));
+  sortBtn.title = sorted ? 'Sorted by nearest limit. Click for your own order (drag cards to arrange).' : 'Your own order (drag cards to arrange). Click to sort by nearest limit.';
   scheduleFit();
   for (const b of document.querySelectorAll('#density button')) {
     const on = b.dataset.density === d;
