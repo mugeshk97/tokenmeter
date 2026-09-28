@@ -10,6 +10,8 @@ contextBridge.exposeInMainWorld('usage', {
   hide: () => ipcRenderer.invoke('window:hide'),
   togglePin: () => ipcRenderer.invoke('window:togglePin'),
   fitHeight: (h) => ipcRenderer.invoke('window:fit', h),
+  // Moves the window by script while pinned (the pinned top bar isn't a native drag area).
+  dragWindow: (phase) => ipcRenderer.send('window:drag', phase),
   openConsole: (id) => ipcRenderer.invoke('open:console', id),
   onState: (cb) => {
     const h = (_e, s) => cb(s);

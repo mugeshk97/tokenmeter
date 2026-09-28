@@ -430,6 +430,23 @@ function registerIpc() {
       fitHeight(h);
     })
   );
+  // Script-driven window drag for the pinned widget. The pinned top bar can't be a native drag
+  // area (Electron sends no hover events over those, and hover reveals the controls).
+  // The OS cursor position is used rather than the page's pointer coordinates, which can shift
+  // with the window as it moves and make it overshoot.
+  let dragFrom = null;
+  ipcMain.on('window:drag', (event, phase) => {
+    if (!fromOurPage(event) || !win || win.isDestroyed() || !store.config.alwaysOnTop) return;
+    const c = screen.getCursorScreenPoint();
+    if (phase === 'start') {
+      const [wx, wy] = win.getPosition();
+      dragFrom = { wx, wy, x: c.x, y: c.y };
+    } else if (phase === 'move' && dragFrom) {
+      win.setPosition(dragFrom.wx + c.x - dragFrom.x, dragFrom.wy + c.y - dragFrom.y);
+    } else {
+      dragFrom = null;
+    }
+  });
   ipcMain.handle(
     'open:console',
     guard((id) => {

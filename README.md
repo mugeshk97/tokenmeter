@@ -71,6 +71,7 @@ You can also use environment variables instead: `ANTHROPIC_ADMIN_KEY`, `XAI_MANA
 ## Desktop notes
 
 - **Moving it:** drag the header. The window position and size are remembered.
+- **Pinned (always on top, the default):** the widget shows only the cards, the refresh ring and the refresh button. Hover the top bar (or tab into it) to bring back the other buttons, including the pin to unpin. While pinned, cards can't be hidden or reordered; you can still drag the top bar to move the widget. Unpinning shows everything again; the tray menu's "Always on top" does the same.
 - **Closing it:** × hides the widget to the tray (the menu bar on macOS). The tray menu has Show/Hide, Refresh, Always on top, Start at login, Settings and Quit. Launching the app again also brings the widget back.
 - **GNOME tray icon (Linux):** GNOME needs the *AppIndicator and KStatusNotifierItem Support* extension to show it. Ubuntu ships this by default.
 - **Wayland (Linux):** native Wayland apps can't keep themselves on top or choose their position. The app therefore runs through XWayland by default ("Use XWayland on Wayland" in Settings).
@@ -79,7 +80,8 @@ You can also use environment variables instead: `ANTHROPIC_ADMIN_KEY`, `XAI_MANA
 - **What's left, first:** each card leads with what's left on its tightest limit (Codex shows whichever of the 5-hour and weekly limits is closer). Every tool uses the same Tokenmeter blue; a bar (and its number) turns red once 80% of the limit is used, i.e. 20% or less is left. Cards without a limit show tokens today.
 - **Card size:** the three grid icons under the header (Compact / Normal / Detailed) switch every card between small tiles (two per row, one number, one bar, one footnote), Normal (two per row) and Detailed (the full card, with chart and notes). The grid adds columns as you widen the window.
 - **Order:** the sort button on the right (blue when on, the default) puts the card closest to running out first. Drag a card, or focus it and press Alt+arrow keys, to set your own order instead; this turns sorting off. Click the button again to go back to sorting by limit.
-- **Refresh ring:** the small ring next to the name fills until the next API refresh; hover it for the exact times.
+- **Refresh ring:** the small ring next to the name fills until the next API refresh; hover or tab to it for the exact times.
+- **Status dot:** a card only shows a dot when something needs attention: red when its last refresh failed, grey when it isn't set up yet.
 - **Adding and hiding tools:** hover a card and click × to hide it. The + button in the header lists hidden tools at the top of the widget; click one to bring it back. The button is greyed out when every tool is shown. Settings still has a "Show on widget" checkbox for each tool.
 
 ## What the numbers mean (and their limits)

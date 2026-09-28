@@ -193,7 +193,7 @@ function sparkEls(c) {
 
 function renderCard(c) {
   const d = density();
-  const card = el('article', { class: `card card-${d}`, 'data-status': c.status, 'data-id': c.id, draggable: 'true', 'aria-busy': c.status === 'loading' ? 'true' : null });
+  const card = el('article', { class: `card card-${d}`, 'data-status': c.status, 'data-id': c.id, draggable: pinned() ? null : 'true', 'aria-busy': c.status === 'loading' ? 'true' : null });
   if (d !== 'compact') card.append(gripEl());
   card.append(cardHead(c, d));
 
@@ -281,6 +281,10 @@ function announceChanges(cards) {
   if (msgs.length) $('#announcer').textContent = msgs.join('. ');
 }
 
+function pinned() {
+  return Boolean(state.meta.alwaysOnTop);
+}
+
 function sortByLimit() {
   return state.meta.sortByLimit !== false;
 }
@@ -297,6 +301,7 @@ function render() {
     drag.stale = true;
     return;
   }
+  if (pinned()) pickerOpen = false;
   const root = $('#cards');
   const cards = orderedCards();
   const d = density();
@@ -316,6 +321,9 @@ function render() {
 
   tickRing();
   $('#btn-pin').setAttribute('aria-pressed', String(Boolean(state.meta.alwaysOnTop)));
+  // Pinned: a glanceable, locked widget. Only the cards, the refresh ring and refresh show;
+  // hovering or tabbing into the top bar brings the other controls back (styles.css, "Pinned").
+  document.body.classList.toggle('pinned', pinned());
   const hiddenCount = hiddenTools().length;
   if (!hiddenCount) pickerOpen = false;
   const add = $('#btn-add');
@@ -411,7 +419,7 @@ cardsRoot.addEventListener('dragend', endDrag);
 
 // Keyboard alternative to dragging: Alt+arrow moves the focused card.
 cardsRoot.addEventListener('keydown', (e) => {
-  if (!e.altKey) return;
+  if (!e.altKey || pinned()) return;
   const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
   const card = cardOf(e.target);
   if (!step || !card) return;
@@ -424,6 +432,38 @@ cardsRoot.addEventListener('keydown', (e) => {
     $('#announcer').textContent = `${name} moved to position ${ids.indexOf(target) + 1} of ${ids.length}`;
   });
 });
+
+// ---------- moving the pinned widget ----------
+// Pinned, the top bar isn't a native drag area (so hovering it can reveal the controls);
+// dragging its empty space moves the window by script instead.
+{
+  const bar = $('.topbar');
+  let moving = false;
+  let frame = 0;
+  bar.addEventListener('pointerdown', (e) => {
+    if (!pinned() || e.button !== 0 || e.target.closest('button, .ring')) return;
+    moving = true;
+    bar.setPointerCapture(e.pointerId);
+    api.dragWindow('start');
+  });
+  bar.addEventListener('pointermove', () => {
+    if (!moving || frame) return;
+    frame = requestAnimationFrame(() => {
+      frame = 0;
+      api.dragWindow('move');
+    });
+  });
+  const stop = () => {
+    if (!moving) return;
+    moving = false;
+    cancelAnimationFrame(frame);
+    frame = 0;
+    api.dragWindow('move'); // land exactly where the pointer stopped
+    api.dragWindow('end');
+  };
+  bar.addEventListener('pointerup', stop);
+  bar.addEventListener('pointercancel', stop);
+}
 
 // ---------- refresh countdown ring (header) ----------
 function inWords(ms) {
@@ -449,7 +489,7 @@ function tickRing() {
     }
   }
   $('#refresh-ring-fill').style.strokeDashoffset = String(100 - pct);
-  $('#refresh-ring-title').textContent = text;
+  $('#refresh-ring-tip').textContent = text;
   $('#refresh-ring').setAttribute('aria-label', text);
 }
 
@@ -691,7 +731,8 @@ $('#btn-refresh').addEventListener('click', async () => {
 });
 $('#btn-pin').addEventListener('click', async () => {
   const on = await api.togglePin();
-  $('#btn-pin').setAttribute('aria-pressed', String(Boolean(on)));
+  state.meta.alwaysOnTop = Boolean(on);
+  render();
 });
 $('#btn-settings').addEventListener('click', () => (settingsOpen ? closeSettings() : openSettings()));
 $('#btn-hide').addEventListener('click', () => api.hide());

@@ -132,6 +132,7 @@ button {
 /* ---- Top bar (drag handle) ---- */
 .topbar {
   -webkit-app-region: drag;
+  position: relative; /* anchors the refresh ring's tip */
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -172,16 +173,47 @@ button {
 
 /* Countdown to the next API refresh */
 .ring {
-  -webkit-app-region: no-drag; /* the header is a drag handle, which would swallow the tooltip */
+  -webkit-app-region: no-drag; /* the header is a drag handle, which would swallow hover */
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--radius-full);
+  flex: none;
+  cursor: default;
+}
+
+.ring svg {
   width: 12px;
   height: 12px;
-  flex: none;
   transform: rotate(-90deg);
 }
 
 .ring circle {
   fill: none;
   stroke-width: 2.5;
+}
+
+.ring-tip {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  left: var(--sp-8);
+  right: var(--sp-8);
+  z-index: 5;
+  padding: var(--sp-4) var(--sp-8);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: var(--text-xs);
+  box-shadow: var(--shadow-sm);
+  pointer-events: none;
+}
+
+.ring:hover + .ring-tip,
+.ring:focus-visible + .ring-tip {
+  display: block;
 }
 
 .ring-track {
@@ -358,6 +390,16 @@ button {
   color: var(--focus);
 }
 
+.sort-off circle {
+  fill: currentColor;
+  stroke: none;
+}
+
+.sort[aria-pressed='true'] .sort-off,
+.sort[aria-pressed='false'] .sort-on {
+  display: none;
+}
+
 .sort svg {
   width: 15px;
   height: 15px;
@@ -435,7 +477,7 @@ button {
 .grip {
   position: absolute;
   left: 3px;
-  top: 17px;
+  top: 18px; /* centered on the card name */
   width: 6px;
   height: 10px;
   fill: var(--muted);
@@ -452,7 +494,6 @@ button {
   align-items: center;
   gap: var(--sp-6);
   min-width: 0;
-  padding-right: var(--sp-20); /* room for the hide button */
 }
 
 .status-dot {
@@ -462,6 +503,11 @@ button {
   background: var(--good);
   box-shadow: 0 0 0 var(--ring-halo) color-mix(in srgb, var(--good) 18%, transparent);
   flex: none;
+}
+
+/* The dot only speaks up when something's wrong: red for errors, grey when not set up or loading. */
+.card[data-status='ok'] .status-dot {
+  display: none;
 }
 
 .card[data-status='error'] .status-dot {
@@ -521,10 +567,9 @@ button {
 }
 
 .card-hide {
-  /* Pinned to the corner; .card-head reserves its width with padding-right. */
-  position: absolute;
-  top: 5px;
-  right: 5px;
+  /* In the header row, so it lines up with the name; pulled 4px right so the × sits near the corner. */
+  flex: none;
+  margin: 0 -4px 0 auto;
   width: 24px;
   height: 24px;
   display: grid;
@@ -550,18 +595,17 @@ button {
 /* Compact tiles are too narrow to reserve room, so the button appears on hover or keyboard
    focus there, over a solid background. Settings > "Show on widget" is the always-visible
    alternative. */
-.card-compact .card-head {
-  padding-right: 0;
-}
-
 .card-compact .card-hide {
   opacity: 0;
-  background: var(--panel-2);
 }
 
 .card-compact:hover .card-hide,
 .card-compact:focus-within .card-hide {
   opacity: 1;
+}
+
+.card-age + .card-hide {
+  margin-left: 0; /* the age already pushes it right */
 }
 
 .card-hide svg {
@@ -1023,3 +1067,38 @@ select {
   cursor: pointer;
   white-space: nowrap;
 }
+
+/* ---- Pinned: only the cards, the refresh ring and refresh ----
+   Hovering or tabbing into the top bar brings the other controls back. Electron sends no hover
+   over native drag areas, so while pinned the bar isn't one; app.js moves the window instead. */
+.pinned .topbar {
+  -webkit-app-region: no-drag;
+  cursor: grab;
+}
+
+.pinned .topbar :is(button, .ring) {
+  cursor: pointer;
+}
+
+.pinned .topbar .ring {
+  cursor: default;
+}
+
+.pinned .topbar:not(:hover):not(:focus-within) :is(.logo, .app-title, #btn-add, #btn-pin, #btn-settings, #btn-hide) {
+  display: none;
+}
+
+.pinned .topbar:not(:hover):not(:focus-within) .brand {
+  margin-left: auto; /* ring sits next to the refresh button */
+}
+
+.pinned .toolbar,
+.pinned .card-hide,
+.pinned .grip {
+  display: none;
+}
+
+.pinned .card {
+  cursor: default;
+}
+
