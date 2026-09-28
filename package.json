@@ -29,6 +29,9 @@
       "assets/**/*",
       "package.json"
     ],
+    "electronLanguages": [
+      "en-US"
+    ],
     "linux": {
       "target": [
         "AppImage",
@@ -86,7 +89,7 @@
         "provider": "github",
         "owner": "mugeshk97",
         "repo": "tokenmeter",
-        "releaseType": "release"
+        "releaseType": "draft"
       }
     ]
   },

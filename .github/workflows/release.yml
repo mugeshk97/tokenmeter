@@ -1,0 +1,125 @@
+name: release
+
+# Push a tag like v1.2.0 (matching package.json "version") to build every OS, publish the GitHub
+# release the in-app updater reads, and refresh the apt repository on GitHub Pages.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tag must match package.json version
+        run: |
+          v=$(node -p "require('./package.json').version")
+          [ "v$v" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match package.json version $v"; exit 1; }
+      # One draft up front, so the three build jobs upload into it instead of racing to create it.
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --draft --title "Tokenmeter ${GITHUB_REF_NAME#v}" --generate-notes
+
+  build:
+    needs: draft
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: --linux
+          - os: windows-latest
+            target: --win
+          - os: macos-latest
+            target: --mac
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      # Uploads the installers plus latest*.yml (what the updater reads) into the draft.
+      - run: npx electron-builder ${{ matrix.target }} --publish always
+        env:
+          GH_TOKEN: ${{ github.token }}
+          # No Apple Developer ID yet: package.json asks for ad-hoc signing ("identity": "-").
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # Apple Silicon refuses to run unsigned apps: fail here rather than ship one.
+      - name: Check the macOS apps are ad-hoc signed
+        if: runner.os == 'macOS'
+        run: |
+          found=0
+          for app in dist/mac*/Tokenmeter.app; do
+            found=1
+            codesign --verify --strict --verbose=2 "$app"
+            codesign -dv "$app" 2>&1 | grep -q 'Signature=adhoc' || { echo "$app is not ad-hoc signed"; exit 1; }
+          done
+          [ "$found" = 1 ] || { echo "no .app built"; exit 1; }
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      # A build can succeed without its latest*.yml, which would quietly break updates for that OS.
+      - name: Check every installer and update file is there
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          assets=$(gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')
+          echo "$assets"
+          missing=0
+          for pattern in '^latest\.yml$' '^latest-linux\.yml$' '^latest-mac\.yml$' '\.deb$' '\.AppImage$' 'setup-x64\.exe$' 'arm64\.dmg$' 'x64\.dmg$' 'arm64\.zip$' 'x64\.zip$'; do
+            echo "$assets" | grep -Eq "$pattern" || { echo "missing: $pattern"; missing=1; }
+          done
+          exit $missing
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --draft=false --latest
+
+  apt:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the .deb from the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download "$GITHUB_REF_NAME" -p '*.deb' -D debs
+      - name: Build the signed apt repository
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dpkg-dev apt-utils
+          export GNUPGHOME=$(mktemp -d)
+          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
+          packaging/apt/build-repo.sh debs site
+          rm -rf "$GNUPGHOME"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  pages:
+    needs: apt
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

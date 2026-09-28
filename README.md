@@ -29,9 +29,19 @@ npm test           # provider/parser tests (no network)
 
 ## Install as an app
 
-`npm run dist` builds installers for the OS you run it on (each OS builds its own).
+Download the installer for your OS from [GitHub Releases](https://github.com/mugeshk97/tokenmeter/releases/latest), or build it yourself: `npm run dist` builds installers for the OS you run it on (each OS builds its own).
 
-**Linux**
+**Linux (apt):** add the Tokenmeter apt repository once and updates arrive with your other system updates:
+
+```bash
+curl -fsSL https://mugeshk97.github.io/tokenmeter/tokenmeter-archive-keyring.gpg | sudo tee /usr/share/keyrings/tokenmeter-archive-keyring.gpg >/dev/null
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/tokenmeter-archive-keyring.gpg] https://mugeshk97.github.io/tokenmeter stable main" | sudo tee /etc/apt/sources.list.d/tokenmeter.list
+sudo apt update && sudo apt install tokenmeter
+```
+
+The repository is signed with key `51E7 3671 79B2 798A B250  5D10 7CFF 9452 0564 EA38`.
+
+**Linux (build it yourself)**
 
 ```bash
 npm run dist
@@ -44,7 +54,7 @@ sudo apt install ./dist/tokenmeter-1.0.0-amd64.deb
 
 **Windows:** `npm run dist` → `dist/tokenmeter-1.0.0-setup-x64.exe`. The installer isn't code-signed yet, so SmartScreen warns about an unknown publisher: click **More info → Run anyway**.
 
-**macOS:** `npm run dist` → `dist/tokenmeter-1.0.0-arm64.dmg` (Apple Silicon) and `-x64.dmg` (Intel). The app isn't signed with an Apple Developer ID yet, so the first launch needs right-click → **Open** (or `xattr -dr com.apple.quarantine /Applications/Tokenmeter.app`). It runs from the menu bar, with no Dock icon.
+**macOS:** `npm run dist` → `dist/tokenmeter-1.0.0-arm64.dmg` (Apple Silicon) and `-x64.dmg` (Intel). The app isn't signed with an Apple Developer ID yet, so macOS blocks the first launch: open **System Settings → Privacy & Security** and click **Open Anyway** next to Tokenmeter (on macOS 14 and older, right-click the app → **Open** also works). Or run `xattr -dr com.apple.quarantine /Applications/Tokenmeter.app` once. It runs from the menu bar, with no Dock icon.
 
 Then tick **Start at login** in Settings (or the tray menu). On Linux this writes `~/.config/autostart/tokenmeter.desktop`; on Windows and macOS it uses the system login items.
 
@@ -58,6 +68,15 @@ Local tool folders are the same on every OS, under your home folder (`~/.claude`
 | Linux `.deb`, macOS | The update icon opens the download page (the `.deb` would need a root password; macOS needs a signed app to update itself) |
 
 Turn off **Install updates automatically** in Settings to always just be told.
+
+**Releasing:** set the new version and push its tag; `.github/workflows/release.yml` does the rest:
+
+```bash
+npm version patch        # bumps package.json and creates the tag, e.g. v1.0.1
+git push origin dev --follow-tags
+```
+
+The workflow builds Linux, Windows and macOS installers into a draft release, publishes it once all three succeed (so the in-app updater never sees a half-finished release), then rebuilds the signed apt repository on GitHub Pages from the new `.deb`.
 
 **Icons:** each OS gets its own icon file, drawn from `assets/logo.svg` at every size so small icons stay sharp: `assets/icons/linux/` (16–512px PNGs), `assets/icon.ico` (Windows, 16–256px) and `assets/icon.icns` (macOS, 16–1024px with retina sizes). After editing the SVG, run `npm run icons` to regenerate them.
 
