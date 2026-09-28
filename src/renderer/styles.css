@@ -57,7 +57,7 @@
     --track: #e7eaf0;
     --warn: #96600f;
     --bad: #c53030;
-    --good: #2f9e6b;
+    --good: #26875a; /* 3.7:1 against --track, so bars stay readable */
     --focus: #3b6fe0;
     --on-focus: #ffffff;
     color-scheme: light;
@@ -320,7 +320,7 @@ button {
   color: var(--text);
 }
 
-.sort[aria-pressed='true'] {
+.sort[data-on='true'] {
   background: color-mix(in srgb, var(--focus) 14%, transparent);
   border-color: color-mix(in srgb, var(--focus) 40%, var(--border));
   color: var(--focus);

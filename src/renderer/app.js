@@ -341,7 +341,8 @@ function render() {
   add.setAttribute('aria-expanded', String(pickerOpen));
   $('#demo-banner').hidden = !state.meta.demo;
   const sorted = sortByLimit();
-  $('#btn-sort').setAttribute('aria-pressed', String(sorted));
+  // The visible text is the name and the state ("Nearest limit" / "Custom order"), so no aria-pressed.
+  $('#btn-sort').dataset.on = String(sorted);
   $('#sort-label').textContent = sorted ? 'Nearest limit' : 'Custom order';
   if (peek.id && !$('#peek').hidden) placePeek(); // keep an open peek in step with new data
   scheduleFit();
@@ -471,8 +472,8 @@ function placePeek() {
   node.style.top = `${Math.round(top)}px`;
 }
 
-cardsRoot.addEventListener('mouseover', (e) => {
-  const card = cardOf(e.target);
+/** Open the peek for a tile after a short pause (mouse hover or keyboard focus). */
+function schedulePeek(card) {
   if (!card || card.dataset.id === peek.id) return;
   hidePeek();
   const c = (state.cards || []).find((x) => x.id === card.dataset.id);
@@ -482,6 +483,15 @@ cardsRoot.addEventListener('mouseover', (e) => {
   peek.timer = setTimeout(() => {
     if (peek.id === c.id && !drag.id) placePeek();
   }, PEEK_DELAY);
+}
+
+cardsRoot.addEventListener('mouseover', (e) => schedulePeek(cardOf(e.target)));
+// Keyboard users get the same detail when a card's name button has focus.
+cardsRoot.addEventListener('focusin', (e) => {
+  if (e.target.matches('.card-name')) schedulePeek(cardOf(e.target));
+});
+cardsRoot.addEventListener('focusout', (e) => {
+  if (cardOf(e.target) !== cardOf(e.relatedTarget)) hidePeek();
 });
 cardsRoot.addEventListener('mouseout', (e) => {
   const from = cardOf(e.target);
@@ -750,7 +760,8 @@ $('#btn-cancel').addEventListener('click', closeSettings);
 $('#settings-form').opacity.addEventListener('input', showOpacity);
 $('#settings-form').addEventListener('submit', saveSettings);
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && settingsOpen) closeSettings();
+  if (e.key === 'Escape' && !$('#peek').hidden) hidePeek();
+  else if (e.key === 'Escape' && settingsOpen) closeSettings();
   else if (e.key === 'Escape' && pickerOpen) {
     togglePicker(false);
     $('#btn-add').focus();
