@@ -1,0 +1,42 @@
+{
+  "name": "tokenmeter",
+  "productName": "Tokenmeter",
+  "version": "1.0.0",
+  "description": "Always-on desktop meter for Claude, Codex, Grok, Copilot and Gemini usage on Linux",
+  "main": "src/main.js",
+  "author": "Mugesh Kannan K S",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "demo": "AIU_DEMO=1 electron .",
+    "test": "node --test",
+    "dist": "electron-builder --linux AppImage deb"
+  },
+  "devDependencies": {
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "dev.mugesh.tokenmeter",
+    "productName": "Tokenmeter",
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "icon": "assets/icon512.png",
+      "synopsis": "AI token and quota usage on your desktop",
+      "maintainer": "Mugesh Kannan K S"
+    },
+    "artifactName": "${name}-${version}-${arch}.${ext}",
+    "publish": null
+  },
+  "homepage": "https://github.com/mugeshk97"
+}

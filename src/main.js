@@ -1,0 +1,464 @@
+'use strict';
+
+const path = require('path');
+const fs = require('fs');
+const { app, BrowserWindow, Tray, Menu, ipcMain, nativeImage, nativeTheme, net, safeStorage, screen, shell, powerMonitor } = require('electron');
+const { Store, readConfigSync } = require('./config');
+const { Poller } = require('./poller');
+const { PROVIDERS } = require('./providers');
+const { setAutostart } = require('./autostart');
+
+const ASSETS = path.join(__dirname, '..', 'assets');
+const MIN_HEIGHT = 110;
+const DEMO = process.env.AIU_DEMO === '1';
+const SCREENSHOT = process.env.AIU_SCREENSHOT || '';
+
+// --- Pre-ready setup -------------------------------------------------------
+/**
+ * The app used to be called "AI Usage Widget". Its settings live under that name in
+ * ~/.config; copy them over on the first run as Tokenmeter. The old folder is left as-is.
+ * Keys encrypted by the old build may need re-entering: the keyring entry is tied to the app name.
+ */
+function migrateLegacyUserData() {
+  const current = app.getPath('userData');
+  const legacy = path.join(app.getPath('appData'), 'AI Usage Widget');
+  if (legacy === current || fs.existsSync(path.join(current, 'config.json'))) return;
+  if (!fs.existsSync(path.join(legacy, 'config.json'))) return;
+  try {
+    fs.mkdirSync(current, { recursive: true });
+    for (const name of ['config.json', 'secrets.json']) {
+      const from = path.join(legacy, name);
+      if (fs.existsSync(from)) fs.copyFileSync(from, path.join(current, name));
+    }
+  } catch (err) {
+    console.warn('Settings migration failed:', err.message);
+  }
+}
+
+// Always-on-top and window positioning are not allowed for native Wayland clients,
+// so by default we run through XWayland on Wayland sessions.
+{
+  migrateLegacyUserData();
+  const early = readConfigSync(app.getPath('userData'));
+  if (early.forceX11 && process.platform === 'linux' && process.env.XDG_SESSION_TYPE === 'wayland') {
+    app.commandLine.appendSwitch('ozone-platform', 'x11');
+  }
+}
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+  process.exit(0);
+}
+
+let store;
+let poller;
+let win = null;
+let tray = null;
+let quitting = false;
+let lastCards = [];
+
+function meta() {
+  return {
+    alwaysOnTop: Boolean(store.config.alwaysOnTop),
+    pollMinutes: store.config.pollMinutes,
+    density: store.config.density,
+    autoFit: store.config.autoFit !== false,
+    demo: DEMO,
+    // Every provider, including hidden ones, so the widget can offer "Add tool".
+    providers: PROVIDERS.map((p) => ({ id: p.id, name: p.name, short: p.short || p.name, accent: p.accent, kind: p.kind, enabled: Boolean((store.config.providers[p.id] || {}).enabled) })),
+  };
+}
+
+// --- Window ----------------------------------------------------------------
+function visibleBounds(saved) {
+  const { width = 340, height = 620, x, y } = saved || {};
+  if (Number.isFinite(x) && Number.isFinite(y)) {
+    const onScreen = screen.getAllDisplays().some((d) => {
+      const a = d.workArea;
+      return x + 60 > a.x && x < a.x + a.width - 60 && y >= a.y - 10 && y < a.y + a.height - 40;
+    });
+    if (onScreen) return { width, height, x, y };
+  }
+  const a = screen.getPrimaryDisplay().workArea;
+  return { width, height, x: a.x + a.width - width - 16, y: a.y + 16 };
+}
+
+/**
+ * Resize the window to the content height the page asks for, like a desktop widget.
+ * A widget the user placed in the lower half of the screen keeps its bottom edge fixed
+ * and grows upward. The anchor only changes when the user moves the window, so
+ * repeated grow/shrink never makes it drift.
+ */
+let anchorBottom = false;
+let anchorEdge = 0; // the y of the edge the user placed: top, or bottom if anchorBottom
+let fitting = false;
+
+function updateAnchor() {
+  const b = win.getBounds();
+  const area = screen.getDisplayMatching(b).workArea;
+  anchorBottom = b.y + b.height / 2 > area.y + area.height / 2;
+  anchorEdge = anchorBottom ? b.y + b.height : b.y;
+}
+
+function fitHeight(contentHeight) {
+  const b = win.getBounds();
+  const area = screen.getDisplayMatching(b).workArea;
+  const maxH = Math.max(MIN_HEIGHT, area.height - 32);
+  const h = Math.min(maxH, Math.max(MIN_HEIGHT, contentHeight));
+  if (Math.abs(h - b.height) < 2) return;
+  let y = anchorBottom ? anchorEdge - h : anchorEdge;
+  y = Math.min(Math.max(y, area.y), area.y + area.height - h); // stay on screen
+  fitting = true;
+  win.setBounds({ x: b.x, y, width: b.width, height: h });
+  setTimeout(() => (fitting = false), 300); // X11 reports the resulting move asynchronously
+}
+
+function createWindow() {
+  const bounds = visibleBounds(store.config.window);
+  win = new BrowserWindow({
+    ...bounds,
+    minWidth: 280,
+    minHeight: MIN_HEIGHT,
+    frame: false,
+    resizable: true,
+    maximizable: false,
+    fullscreenable: false,
+    alwaysOnTop: Boolean(store.config.alwaysOnTop),
+    skipTaskbar: true,
+    show: false,
+    title: 'Tokenmeter',
+    backgroundColor: '#0f1115',
+    icon: path.join(ASSETS, 'icon.png'),
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      spellcheck: false,
+    },
+  });
+  win.setVisibleOnAllWorkspaces(true);
+  win.setOpacity(Number(store.config.opacity) || 1);
+  win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+
+  win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
+  win.webContents.on('will-navigate', (e) => e.preventDefault());
+
+  win.once('ready-to-show', () => {
+    if (!SCREENSHOT) win.showInactive();
+  });
+
+  let saveTimer;
+  const saveBounds = () => {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      if (win && !win.isDestroyed()) store.setWindowBounds(win.getBounds());
+    }, 600);
+  };
+  win.on('move', () => {
+    if (!fitting) updateAnchor();
+    saveBounds();
+  });
+  updateAnchor();
+  win.on('resize', saveBounds);
+
+  win.on('close', (e) => {
+    if (!quitting && tray) {
+      e.preventDefault();
+      win.hide();
+      buildTrayMenu();
+    }
+  });
+  win.on('closed', () => {
+    win = null;
+  });
+
+  if (SCREENSHOT) {
+    win.webContents.once('did-finish-load', () => {
+      setTimeout(async () => {
+        if (process.env.AIU_SCREENSHOT_JS) {
+          await win.webContents.executeJavaScript(process.env.AIU_SCREENSHOT_JS);
+          await new Promise((r) => setTimeout(r, 600));
+        }
+        const img = await win.webContents.capturePage();
+        fs.writeFileSync(SCREENSHOT, img.toPNG());
+        quitting = true;
+        app.exit(0);
+      }, 1800);
+    });
+  }
+}
+
+function showWindow() {
+  if (!win) createWindow();
+  win.show();
+  win.focus();
+  buildTrayMenu();
+}
+
+function toggleWindow() {
+  if (win && win.isVisible()) win.hide();
+  else showWindow();
+  buildTrayMenu();
+}
+
+function setAlwaysOnTop(v) {
+  store.update({ config: { alwaysOnTop: Boolean(v) } });
+  if (win) win.setAlwaysOnTop(Boolean(v));
+  buildTrayMenu();
+  pushState();
+}
+
+// --- Tray ------------------------------------------------------------------
+function buildTrayMenu() {
+  if (!tray) return;
+  const visible = Boolean(win && win.isVisible());
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: visible ? 'Hide widget' : 'Show widget', click: toggleWindow },
+      { label: 'Refresh now', click: () => poller.refresh() },
+      { type: 'separator' },
+      { label: 'Always on top', type: 'checkbox', checked: Boolean(store.config.alwaysOnTop), click: (m) => setAlwaysOnTop(m.checked) },
+      {
+        label: 'Start at login',
+        type: 'checkbox',
+        checked: Boolean(store.config.startAtLogin),
+        click: (m) => applySettings({ config: { startAtLogin: m.checked } }),
+      },
+      {
+        label: 'Settings…',
+        click: () => {
+          showWindow();
+          win.webContents.send('ui:open-settings');
+        },
+      },
+      { type: 'separator' },
+      {
+        label: 'Quit',
+        click: () => {
+          quitting = true;
+          app.quit();
+        },
+      },
+    ])
+  );
+}
+
+function trayTooltip(cards) {
+  const lines = cards
+    .filter((c) => c.status === 'ok' && c.headline)
+    .map((c) => `${c.name}: ${c.headline.value} ${c.headline.label || ''}`.trim());
+  return lines.length ? lines.join('\n') : 'Tokenmeter';
+}
+
+function createTray() {
+  try {
+    const img = nativeImage.createFromPath(path.join(ASSETS, 'tray.png'));
+    tray = new Tray(img);
+    tray.setToolTip('Tokenmeter');
+    tray.on('click', toggleWindow);
+    buildTrayMenu();
+  } catch (err) {
+    console.warn('Tray unavailable:', err.message);
+    tray = null;
+  }
+}
+
+// --- State & settings ------------------------------------------------------
+function visibleCards() {
+  if (!DEMO) return lastCards;
+  // Demo cards are fixed; apply the user's show/hide and order to them here.
+  const order = store.config.order || [];
+  return lastCards
+    .filter((c) => (store.config.providers[c.id] || {}).enabled)
+    .sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+}
+
+function pushState() {
+  if (win && !win.isDestroyed()) win.webContents.send('state:update', { cards: visibleCards(), meta: meta() });
+}
+
+function onCards(cards) {
+  lastCards = cards;
+  pushState();
+  if (tray) tray.setToolTip(trayTooltip(cards));
+}
+
+function settingsPayload() {
+  const envMap = {};
+  for (const p of PROVIDERS) Object.assign(envMap, p.env || {});
+  const { window: _w, ...config } = store.config;
+  return {
+    config,
+    secrets: store.secretFlags(envMap),
+    encryption: store.encryptionInfo(),
+    providers: PROVIDERS.map((p) => ({ id: p.id, name: p.name, kind: p.kind, secrets: p.secrets, env: p.env || {} })),
+    session: process.env.XDG_SESSION_TYPE || 'unknown',
+  };
+}
+
+// Provider settings minus the show/hide flag: showing or hiding a card shouldn't refetch everything.
+function fetchSignature() {
+  const providers = {};
+  for (const [id, pc] of Object.entries(store.config.providers)) providers[id] = { ...pc, enabled: undefined };
+  return JSON.stringify({ c: providers, p: store.config.pollMinutes, s: store.secretFlags() });
+}
+
+function enabledIds() {
+  return Object.keys(store.config.providers).filter((id) => store.config.providers[id].enabled);
+}
+
+function applySettings(payload) {
+  const before = fetchSignature();
+  const enabledBefore = enabledIds();
+  const prev = { ...store.config };
+  store.update(payload || {});
+  const changed = (k) => prev[k] !== store.config[k];
+  // Only touch what changed: re-applying always-on-top/opacity makes the window manager
+  // redraw the window, which flickered on every density switch or card show/hide.
+  if (changed('theme')) applyTheme();
+  if (win && changed('alwaysOnTop')) win.setAlwaysOnTop(Boolean(store.config.alwaysOnTop));
+  if (win && changed('opacity')) win.setOpacity(Number(store.config.opacity) || 1);
+  if (changed('startAtLogin')) {
+    try {
+      setAutostart(app, Boolean(store.config.startAtLogin), iconForAutostart());
+    } catch (err) {
+      console.warn('Autostart update failed:', err.message);
+    }
+  }
+  const secretsTouched = payload && payload.secrets && Object.values(payload.secrets).some((v) => v === null || (typeof v === 'string' && v.trim()));
+  if (!DEMO && (before !== fetchSignature() || secretsTouched)) {
+    poller.reset();
+  } else if (!DEMO) {
+    for (const id of enabledIds()) if (!enabledBefore.includes(id)) poller.refreshById(id);
+    poller.emit(); // re-filter cards for hidden/shown providers
+  } else {
+    pushState();
+  }
+  if (changed('alwaysOnTop') || changed('startAtLogin')) buildTrayMenu();
+  return settingsPayload();
+}
+
+function applyTheme() {
+  const t = process.env.AIU_THEME || store.config.theme;
+  nativeTheme.themeSource = t === 'dark' || t === 'light' ? t : 'system';
+}
+
+function iconForAutostart() {
+  // Copy the icon out of the (possibly read-only, temporary) app bundle.
+  const dest = path.join(app.getPath('userData'), 'icon.png');
+  try {
+    if (!fs.existsSync(dest)) fs.copyFileSync(path.join(ASSETS, 'icon.png'), dest);
+  } catch {
+    /* ignore */
+  }
+  return dest;
+}
+
+function fromOurPage(event) {
+  const url = event.senderFrame && event.senderFrame.url;
+  return typeof url === 'string' && url.startsWith('file://') && url.endsWith('/renderer/index.html');
+}
+
+function registerIpc() {
+  const guard = (fn) => (event, ...args) => {
+    if (!fromOurPage(event)) throw new Error('blocked');
+    return fn(...args);
+  };
+  ipcMain.handle('state:get', guard(() => ({ cards: visibleCards(), meta: meta() })));
+  ipcMain.handle(
+    'refresh',
+    guard((id) => {
+      if (DEMO) return null;
+      return typeof id === 'string' ? poller.refreshById(id) : poller.refresh();
+    })
+  );
+  ipcMain.handle('settings:get', guard(() => settingsPayload()));
+  ipcMain.handle(
+    'settings:save',
+    guard((payload) => {
+      if (!payload || typeof payload !== 'object') throw new Error('bad payload');
+      return applySettings(payload);
+    })
+  );
+  ipcMain.handle(
+    'window:hide',
+    guard(() => {
+      if (tray) win.hide();
+      else win.minimize();
+      buildTrayMenu();
+    })
+  );
+  ipcMain.handle(
+    'window:togglePin',
+    guard(() => {
+      setAlwaysOnTop(!store.config.alwaysOnTop);
+      return store.config.alwaysOnTop;
+    })
+  );
+  ipcMain.handle(
+    'window:fit',
+    guard((height) => {
+      if (!win || win.isDestroyed() || store.config.autoFit === false) return;
+      const h = Math.round(Number(height));
+      if (!Number.isFinite(h)) return;
+      fitHeight(h);
+    })
+  );
+  ipcMain.handle(
+    'open:console',
+    guard((id) => {
+      const p = PROVIDERS.find((x) => x.id === id);
+      if (p && /^https:\/\//.test(p.console)) shell.openExternal(p.console);
+    })
+  );
+}
+
+// --- Lifecycle -------------------------------------------------------------
+app.on('second-instance', () => showWindow());
+
+app.whenReady().then(() => {
+  store = new Store(app.getPath('userData'), safeStorage);
+  applyTheme();
+  // Rewrite the login entry on each start: it moves the pre-rename file to tokenmeter.desktop
+  // and keeps Exec pointing at this build after an update or reinstall.
+  if (store.config.startAtLogin && !SCREENSHOT) {
+    try {
+      setAutostart(app, true, iconForAutostart());
+    } catch (err) {
+      console.warn('Autostart update failed:', err.message);
+    }
+  }
+
+  if (DEMO) {
+    const { demoCards } = require('./demo');
+    poller = { refresh() {}, refreshById() {}, reset() {}, stop() {} };
+    lastCards = demoCards();
+  } else {
+    poller = new Poller({
+      providers: PROVIDERS,
+      getConfig: () => store.config,
+      getSecret: (name, env) => store.getSecret(name, env),
+      onUpdate: onCards,
+      // Chromium's network stack: honours the system proxy settings, unlike Node's fetch.
+      ctx: { fetchImpl: (url, init) => net.fetch(url, init) },
+    });
+  }
+
+  registerIpc();
+  createWindow();
+  if (!SCREENSHOT) createTray();
+  if (!DEMO) poller.start();
+
+  powerMonitor.on('resume', () => poller.refresh());
+});
+
+app.on('before-quit', () => {
+  quitting = true;
+  if (poller) poller.stop();
+});
+
+// Keep running in the tray when the window is hidden.
+app.on('window-all-closed', () => {
+  if (!tray) app.quit();
+});
