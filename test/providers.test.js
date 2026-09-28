@@ -72,13 +72,18 @@ test('anthropic: sums hourly tokens, converts cost cents, follows pagination', a
   );
 
   const card = await fetchAnthropic({ adminKey: 'sk-ant-admin01-test', budget: 100 }, { fetchImpl, now });
-  assert.equal(card.headline.value, '$16.00'); // (1250.5 + 349.5) cents
+  // With a budget, the headline is what's left of it; month to date moves to stats.
+  assert.equal(card.headline.value, '$84.00'); // $100 - (1250.5 + 349.5) cents
+  assert.equal(card.headline.label, 'left of $100 budget');
+  assert.equal(card.foot, '$16.00 spent this month');
   const stat = Object.fromEntries(card.stats.map((s) => [s.label, s.value]));
+  assert.equal(stat['Month to date'], '$16.00');
   assert.equal(stat['Today (UTC)'], '$3.50');
   assert.equal(stat['Tokens 24h'], '1.8K'); // 1200 + 550
   assert.equal(stat['Cache hits'], '20%'); // 300 / (1100+300+100)
   assert.deepEqual(card.spark.points, [1200, 550]);
   assert.equal(card.meters[0].pct, 16);
+  assert.equal(card.meters[0].detail, '84% left');
 
   const first = log[0];
   assert.equal(first.init.headers['x-api-key'], 'sk-ant-admin01-test');
@@ -118,8 +123,10 @@ test('xai: month-to-date from usage series, limit meter from invoice, tolerates 
     log
   );
   const card = await fetchXai({ managementKey: 'xai-mgmt', teamId: 'team-1' }, { fetchImpl, now: new Date('2026-09-28T08:00:00Z'), timeZone: 'Asia/Kolkata' });
-  assert.equal(card.headline.value, '$1.89');
+  assert.equal(card.headline.value, '$198.11'); // left of the $200 spending limit
+  assert.equal(card.headline.label, 'left of $200 limit');
   const stat = Object.fromEntries(card.stats.map((s) => [s.label, s.value]));
+  assert.equal(stat['Month to date'], '$1.89');
   assert.equal(stat.Today, '$0.25');
   assert.equal(stat['Top model'], 'grok-4-0709');
   assert.equal(stat['Postpaid bill'], '$1.89');
@@ -199,9 +206,12 @@ test('codex: reads latest rate-limit snapshot and today tokens (nested format)',
   fs.writeFileSync(path.join(dir, 'rollout-a.jsonl'), lines.map((l) => JSON.stringify(l)).join('\n') + '\n{"partial":');
 
   const card = await fetchCodex({ home }, { now });
-  assert.equal(card.headline.value, '34%');
+  // The weekly limit (71.5% used) is tighter than the 5-hour one (34%), so it leads.
+  assert.equal(card.headline.value, '29%');
+  assert.equal(card.headline.label, 'left this week');
+  assert.match(card.foot, /^resets in (2d|47h 59m)$/);
   assert.equal(card.meters[0].label, '5-hour limit');
-  assert.match(card.meters[0].detail, /^34% · resets in 59m$/); // event was 1 min ago with 3600s left
+  assert.match(card.meters[0].detail, /^66% left · 59m$/); // event was 1 min ago with 3600s left
   assert.equal(card.meters[1].label, 'Weekly limit');
   assert.equal(Math.round(card.meters[1].pct), 72);
   const stat = Object.fromEntries(card.stats.map((s) => [s.label, s.value]));
@@ -248,10 +258,13 @@ test('claude code: dedupes streamed lines and finds the active 5h block', async 
 
   const card = await fetchClaudeCode({ dir: root }, { now });
   // two unique messages: (10+50+100+1000) + (10+200+100+1000)
-  assert.equal(card.headline.value, '2.5K');
-  assert.equal(card.headline.label, 'tokens this session');
+  // Headline is the time left in the session (blocks start on the hour, so it varies).
+  assert.match(card.headline.value, /^(\d+h( \d+m)?|\d+m)$/);
+  assert.equal(card.headline.label, 'left in 5-hour session');
+  assert.equal(card.foot, '2.5K tokens this session');
   assert.equal(card.meters[0].label, '5-hour session window');
   const stat = Object.fromEntries(card.stats.map((s) => [s.label, s.value]));
+  assert.equal(stat['Session tokens'], '2.5K');
   assert.equal(stat['Top model'], 'opus-4-7');
 });
 
@@ -325,9 +338,9 @@ test('copilot: quota meters, most-used headline when no premium quota, token hea
   assert.equal(log[0].init.headers.authorization, 'token gho_secret');
   assert.deepEqual(out.meters.map((m) => m.label), ['Chat', 'Completions']);
   assert.equal(Math.round(out.meters[1].pct), 6);
-  assert.match(out.meters[1].detail, /^119\/2000 · resets in 3d/);
-  assert.equal(out.headline.label, 'completions used'); // most-used quota when premium has none
-  assert.equal(out.headline.value, '6%');
+  assert.match(out.meters[1].detail, /^1881\/2000 left · 3d/);
+  assert.equal(out.headline.label, 'completions left'); // tightest quota when premium has none
+  assert.equal(out.headline.value, '94%');
   assert.ok(out.stats.some((s) => s.label === 'Resets' && s.value === '2026-10-01'));
 });
 
@@ -337,8 +350,9 @@ test('copilot: premium headline and unlimited quotas as stats', async () => {
   user.quota_snapshots.chat = { unlimited: true, entitlement: 0 };
   user.quota_snapshots.completions = { unlimited: true, entitlement: 0 };
   const out = await fetchCopilot({ token: 't' }, { fetchImpl: mockFetch([[/copilot_internal/, user]]) });
-  assert.equal(out.headline.value, '25%');
-  assert.equal(out.headline.label, 'premium requests used');
+  assert.equal(out.headline.value, '75%');
+  assert.equal(out.headline.label, 'premium requests left');
+  assert.equal(out.headline.short, 'premium left');
   assert.equal(out.meters.length, 1);
   assert.ok(out.stats.some((s) => s.label === 'Chat' && s.value === 'unlimited'));
   assert.ok(out.stats.some((s) => s.label === 'Overage' && s.value === '2'));
@@ -424,6 +438,18 @@ test('store: saved order from before new providers gets them appended', () => {
   assert.deepEqual(s.config.order.slice(0, 5), ['xai', 'claudeCode', 'codex', 'anthropic', 'openai']);
   for (const id of ['grokCli', 'copilot', 'geminiCli']) assert.ok(s.config.order.includes(id));
   assert.equal(s.config.providers.copilot.enabled, true);
+});
+
+test('store: dragged order is cleaned up and persists with sortByLimit off', () => {
+  const dir = tmpdir();
+  const s = new Store(dir, null);
+  assert.equal(s.config.sortByLimit, true);
+  s.update({ config: { order: ['codex', 'bogus', 'xai', 'codex'], sortByLimit: false } });
+  assert.deepEqual(s.config.order.slice(0, 2), ['codex', 'xai']);
+  assert.equal(s.config.order.length, 8);
+  const again = new Store(dir, null);
+  assert.equal(again.config.sortByLimit, false);
+  assert.deepEqual(again.config.order, s.config.order);
 });
 
 // ---------------------------------------------------------------- Poller

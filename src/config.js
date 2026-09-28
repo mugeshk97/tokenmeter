@@ -12,6 +12,7 @@ const DEFAULTS = {
   theme: 'system',
   density: 'normal', // compact | normal | detailed
   autoFit: true, // window height follows its content
+  sortByLimit: true, // cards closest to a limit first; dragging a card switches to `order`
   order: ['claudeCode', 'codex', 'grokCli', 'copilot', 'geminiCli', 'anthropic', 'xai', 'openai'],
   providers: {
     claudeCode: { enabled: true, dir: '' },
@@ -157,6 +158,10 @@ class Store {
       const op = Number(this.config.opacity);
       this.config.opacity = Number.isFinite(op) ? Math.min(1, Math.max(0.4, op)) : 1;
       if (!DENSITIES.includes(this.config.density)) this.config.density = DEFAULTS.density;
+      // Card order comes from dragging in the UI: keep known ids once each, then any missing ones.
+      const order = Array.isArray(this.config.order) ? this.config.order.filter((id, i, all) => DEFAULTS.order.includes(id) && all.indexOf(id) === i) : [];
+      this.config.order = [...order, ...DEFAULTS.order.filter((id) => !order.includes(id))];
+      this.config.sortByLimit = this.config.sortByLimit !== false;
       this.saveConfig();
     }
     if (secrets && typeof secrets === 'object') {

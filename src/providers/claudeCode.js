@@ -119,24 +119,33 @@ async function fetchClaudeCode({ dir } = {}, { now = new Date() } = {}) {
   }
 
   const meters = [];
+  const stats = [];
   let headline;
+  let foot;
   if (active) {
     const elapsed = nowMs - active.start;
+    const left = fmtDuration(active.end - nowMs);
     meters.push({
       label: '5-hour session window',
       pct: Math.min(100, (elapsed / BLOCK_MS) * 100),
-      detail: `resets in ${fmtDuration(active.end - nowMs)}`,
+      detail: `resets in ${left}`,
     });
-    headline = { value: fmtTokens(active.tokens), label: 'tokens this session' };
+    // Lead with the time left in the session; its tokens move to the footnote and stats.
+    headline = { value: left, label: 'left in 5-hour session', short: 'left · 5h session' };
+    foot = `${fmtTokens(active.tokens)} tokens this session`;
+    stats.push({ label: 'Session tokens', value: fmtTokens(active.tokens) });
   } else {
     headline = { value: fmtTokens(todayTotal), label: 'tokens today' };
+    foot = 'no active session';
   }
 
   const lastTs = entries.length ? entries[entries.length - 1].ts : 0;
   return {
     headline,
+    foot,
     meters,
     stats: [
+      ...stats,
       { label: 'Tokens today', value: fmtTokens(todayTotal) },
       { label: 'Output today', value: fmtTokens(todayOut) },
       { label: 'Top model', value: topModel ? shortModel(topModel[0]) : '-' },

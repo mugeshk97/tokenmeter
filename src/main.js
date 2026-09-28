@@ -62,6 +62,7 @@ function meta() {
     alwaysOnTop: Boolean(store.config.alwaysOnTop),
     pollMinutes: store.config.pollMinutes,
     density: store.config.density,
+    sortByLimit: store.config.sortByLimit !== false,
     autoFit: store.config.autoFit !== false,
     demo: DEMO,
     // Every provider, including hidden ones, so the widget can offer "Add tool".

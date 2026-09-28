@@ -82,6 +82,7 @@ async function fetchGrokCli({ home } = {}, { now = new Date() } = {}) {
   const topModel = [...byModel.entries()].sort((a, b) => b[1] - a[1])[0];
   return {
     headline: { value: fmtTokens(tokensToday), label: 'tokens today' },
+    foot: `${fmtUSD(usdToday)} today · ${fmtUSD(usdMonth)} mtd`,
     meters: [],
     stats: [
       { label: 'Cost today', value: fmtUSD(usdToday) },

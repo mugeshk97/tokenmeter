@@ -16,17 +16,6 @@
           <span id="updated" class="muted">loading…</span>
         </div>
       </div>
-      <div id="density" class="seg" role="radiogroup" aria-label="Card size">
-        <button type="button" role="radio" data-density="compact" title="Compact" aria-label="Compact" aria-checked="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="3.5" y="3.5" width="4.5" height="4.5" rx="1" /><rect x="9.75" y="3.5" width="4.5" height="4.5" rx="1" /><rect x="16" y="3.5" width="4.5" height="4.5" rx="1" /><rect x="3.5" y="9.75" width="4.5" height="4.5" rx="1" /><rect x="9.75" y="9.75" width="4.5" height="4.5" rx="1" /><rect x="16" y="9.75" width="4.5" height="4.5" rx="1" /><rect x="3.5" y="16" width="4.5" height="4.5" rx="1" /><rect x="9.75" y="16" width="4.5" height="4.5" rx="1" /><rect x="16" y="16" width="4.5" height="4.5" rx="1" /></svg>
-        </button>
-        <button type="button" role="radio" data-density="normal" title="Normal" aria-label="Normal" aria-checked="true">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="7" height="7" rx="1.5" /><rect x="13" y="4" width="7" height="7" rx="1.5" /><rect x="4" y="13" width="7" height="7" rx="1.5" /><rect x="13" y="13" width="7" height="7" rx="1.5" /></svg>
-        </button>
-        <button type="button" role="radio" data-density="detailed" title="Detailed" aria-label="Detailed" aria-checked="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="4" y="4" width="16" height="7" rx="1.5" /><rect x="4" y="13" width="16" height="7" rx="1.5" /></svg>
-        </button>
-      </div>
       <div class="actions">
         <button id="btn-add" class="icon" title="Add tool" aria-label="Add tool" aria-expanded="false" aria-controls="tool-picker">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14" /></svg>
@@ -48,9 +37,24 @@
 
     <div id="demo-banner" class="banner" hidden>Sample data (demo mode)</div>
 
+    <div id="toolbar" class="toolbar">
+      <div id="density" class="seg" role="radiogroup" aria-label="Card size">
+        <button type="button" role="radio" data-density="compact" aria-checked="false">Compact</button>
+        <button type="button" role="radio" data-density="normal" aria-checked="true">Normal</button>
+        <button type="button" role="radio" data-density="detailed" aria-checked="false">Detailed</button>
+      </div>
+      <button type="button" id="btn-sort" class="sort" aria-pressed="true" aria-label="Sort by nearest limit" title="Order cards by the limit closest to running out. Drag a card (or Alt+arrow keys) to set your own order.">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 7h16M7 12h10M10 17h4" /></svg>
+        <span id="sort-label">Nearest limit</span>
+      </button>
+    </div>
+
     <div id="announcer" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></div>
 
     <main id="cards" class="cards" aria-label="Usage by provider"></main>
+
+    <!-- Hover peek: the full card, floated over the grid. Outside #cards so it never changes the window height. -->
+    <div id="peek" class="card peek" aria-hidden="true" hidden></div>
 
     <section id="settings" class="settings" hidden>
       <form id="settings-form" autocomplete="off">

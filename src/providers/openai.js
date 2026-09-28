@@ -1,6 +1,6 @@
 'use strict';
 
-const { httpJson, qs, floorHour, startOfUtcMonth, num, fmtUSD, fmtTokens, clampPct, HOUR } = require('./util');
+const { httpJson, qs, floorHour, startOfUtcMonth, num, fmtUSD, fmtTokens, capHeadline, budgetMeter, HOUR } = require('./util');
 
 const BASE = 'https://api.openai.com';
 
@@ -55,15 +55,14 @@ async function fetchOpenAI({ adminKey, budget = 0 }, { fetchImpl, now = new Date
     return t;
   });
 
-  const meters = [];
-  if (budget > 0) {
-    meters.push({ label: `Monthly budget ${fmtUSD(budget)}`, pct: clampPct((mtd / budget) * 100), detail: `${Math.round((mtd / budget) * 100)}%` });
-  }
+  const meters = budget > 0 ? [budgetMeter(mtd, budget)] : [];
 
   return {
-    headline: { value: fmtUSD(mtd), label: 'month to date' },
+    headline: budget > 0 ? capHeadline(mtd, budget, 'budget') : { value: fmtUSD(mtd), label: 'month to date' },
+    foot: budget > 0 ? `${fmtUSD(mtd)} spent this month` : `${fmtUSD(today)} today`,
     meters,
     stats: [
+      { label: 'Month to date', value: fmtUSD(mtd) },
       { label: 'Today (UTC)', value: fmtUSD(today) },
       { label: 'Tokens 24h', value: fmtTokens(input + output) },
       { label: 'In / Out 24h', value: `${fmtTokens(input)} / ${fmtTokens(output)}` },

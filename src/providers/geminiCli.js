@@ -123,6 +123,7 @@ async function fetchGeminiCli({ home } = {}, { now = new Date() } = {}) {
   const topModel = [...byModel.entries()].sort((a, b) => b[1] - a[1])[0];
   return {
     headline: { value: fmtTokens(tokensToday), label: 'tokens today' },
+    foot: `${fmtTokens(tokensWeek)} last 7 days`,
     meters: [],
     stats: [
       { label: 'Output today', value: fmtTokens(outputToday) },

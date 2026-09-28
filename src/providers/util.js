@@ -137,6 +137,23 @@ function fmtAgo(ms, now = Date.now()) {
   return `${fmtDuration(diff)} ago`;
 }
 
+/** "$100" for whole amounts, otherwise fmtUSD. For labels like "left of $100 budget". */
+function fmtUSDRound(v) {
+  const n = num(v);
+  return Number.isInteger(n) ? `$${n.toLocaleString('en-US')}` : fmtUSD(n);
+}
+
+/** Remaining-first headline for a spending cap (monthly budget or spending limit). */
+function capHeadline(spent, cap, what) {
+  return { value: fmtUSD(Math.max(0, cap - spent)), label: `left of ${fmtUSDRound(cap)} ${what}`, short: `left of ${fmtUSDRound(cap)}` };
+}
+
+/** Meter for a monthly budget, with what's left in the detail. */
+function budgetMeter(spent, budget) {
+  const pct = clampPct((spent / budget) * 100);
+  return { label: `Monthly budget ${fmtUSD(budget)}`, pct, detail: `${Math.round(100 - pct)}% left` };
+}
+
 function clampPct(p) {
   const n = num(p);
   return Math.max(0, Math.min(100, n));
@@ -156,6 +173,9 @@ module.exports = {
   startOfUtcMonth,
   num,
   fmtUSD,
+  fmtUSDRound,
+  capHeadline,
+  budgetMeter,
   fmtTokens,
   fmtDuration,
   fmtAgo,

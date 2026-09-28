@@ -33,10 +33,24 @@ function ago(ms) {
   return `${Math.round(h / 24)}d`;
 }
 
-function barClass(pct) {
-  if (pct >= 90) return 'bar bad';
-  if (pct >= 75) return 'bar warn';
-  return 'bar';
+/** One product color for every tool: green until 80% is used, then red. */
+function lowClass(left) {
+  return left <= 20 ? 'bad' : '';
+}
+
+const leftOf = (m) => 100 - Math.max(0, Math.min(100, Number(m.pct) || 0));
+
+/** The meter closest to running out: it drives the headline color, the compact bar and the sort. */
+function tightest(c) {
+  const meters = c.meters || [];
+  return meters.length ? meters.reduce((a, b) => (leftOf(b) < leftOf(a) ? b : a)) : null;
+}
+
+/** Sort key for "Nearest limit": least left first, then cards without a limit, then ones not set up. */
+function limitKey(c) {
+  if (c.status === 'unconfigured') return 1000;
+  const t = tightest(c);
+  return t ? leftOf(t) : 500;
 }
 
 // ---------- cards ----------
@@ -72,16 +86,17 @@ function density() {
   return DENSITIES.includes(state.meta.density) ? state.meta.density : 'normal';
 }
 
+/** A bar showing what's LEFT on a limit (m.pct is the share used). */
 function meterEl(m, withRow = true) {
-  const pct = Math.max(0, Math.min(100, Number(m.pct) || 0));
+  const left = leftOf(m);
   const fill = el('i');
-  fill.style.width = `${pct}%`;
-  const valuetext = m.detail && m.detail.includes('%') ? m.detail : [`${Math.round(pct)}%`, m.detail].filter(Boolean).join(', ');
+  fill.style.width = `${left}%`;
+  const valuetext = m.detail && m.detail.includes('%') ? m.detail : [`${Math.round(left)}% left`, m.detail].filter(Boolean).join(', ');
   return el(
     'div',
-    { class: 'meter', role: 'meter', 'aria-valuenow': Math.round(pct), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': m.label, 'aria-valuetext': valuetext },
-    withRow ? el('div', { class: 'meter-row' }, el('span', { text: m.label }), el('span', { class: 'meter-detail', text: m.detail || `${Math.round(pct)}%` })) : null,
-    el('div', { class: barClass(pct) }, fill)
+    { class: 'meter', role: 'meter', 'aria-valuenow': Math.round(left), 'aria-valuemin': 0, 'aria-valuemax': 100, 'aria-label': `${m.label} remaining`, 'aria-valuetext': valuetext },
+    withRow ? el('div', { class: 'meter-row' }, el('span', { text: m.label }), el('span', { class: 'meter-detail', text: m.detail || `${Math.round(left)}% left` })) : null,
+    el('div', { class: `bar ${lowClass(left)}`.trim() }, fill)
   );
 }
 
@@ -99,10 +114,14 @@ function shortName(c) {
   return (p && p.short) || c.name;
 }
 
+function ageText(c) {
+  return c.status === 'error' && c.updatedAt ? `stale · ${ago(c.updatedAt)}` : ago(c.updatedAt);
+}
+
 function cardHead(c, d) {
   const label = d === 'detailed' ? c.name : shortName(c);
   const status = STATUS_TEXT[c.status] || c.status;
-  const age = c.status === 'error' && c.updatedAt ? `stale · ${ago(c.updatedAt)}` : ago(c.updatedAt);
+  const age = ageText(c);
   return el(
     'header',
     { class: 'card-head' },
@@ -129,10 +148,53 @@ function icon(d) {
   return svg;
 }
 
+const GRIP = [[1.5, 1.5], [4.5, 1.5], [1.5, 5], [4.5, 5], [1.5, 8.5], [4.5, 8.5]];
+
+function gripEl() {
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.setAttribute('class', 'grip');
+  svg.setAttribute('viewBox', '0 0 6 10');
+  svg.setAttribute('aria-hidden', 'true');
+  for (const [cx, cy] of GRIP) {
+    const dot = document.createElementNS(SVG, 'circle');
+    dot.setAttribute('cx', cx);
+    dot.setAttribute('cy', cy);
+    dot.setAttribute('r', '1');
+    svg.append(dot);
+  }
+  return svg;
+}
+
+function headlineEl(c, d) {
+  const t = tightest(c);
+  const label = d === 'compact' ? c.headline.short || c.headline.label : c.headline.label;
+  return el('div', { class: 'headline' }, el('span', { class: `big ${t ? lowClass(leftOf(t)) : ''}`.trim(), text: c.headline.value }), el('span', { class: 'lbl', text: label || '' }));
+}
+
+/** Compact footnote: the error when there is one, otherwise the provider's one-liner. */
+function footEl(c) {
+  if (c.status === 'error') {
+    const short = (c.error || 'error').split(':')[0];
+    return el('p', { class: 'foot err', text: c.updatedAt ? `${short} · stale ${ago(c.updatedAt)}` : short, title: c.error || '' });
+  }
+  return c.foot ? el('p', { class: 'foot', text: c.foot }) : null;
+}
+
+function statsEl(stats, cols) {
+  const dl = el('dl', { class: 'stats' }, stats.map((s) => el('div', {}, el('dt', { text: s.label }), el('dd', { text: s.value, title: s.value }))));
+  if (cols) dl.style.gridTemplateColumns = cols;
+  return dl;
+}
+
+function sparkEls(c) {
+  if (!c.spark || !Array.isArray(c.spark.points) || c.spark.points.length < 2) return [];
+  return [sparkline(c.spark.points, c.spark.label), el('div', { class: 'spark-lbl', text: c.spark.label, 'aria-hidden': 'true' })];
+}
+
 function renderCard(c) {
   const d = density();
-  const card = el('article', { class: `card card-${d}`, 'data-status': c.status, 'data-id': c.id, 'aria-busy': c.status === 'loading' ? 'true' : null });
-  card.style.setProperty('--accent', c.accent || '#888');
+  const card = el('article', { class: `card card-${d}`, 'data-status': c.status, 'data-id': c.id, draggable: 'true', 'aria-busy': c.status === 'loading' ? 'true' : null });
+  if (d !== 'compact') card.append(gripEl());
   card.append(cardHead(c, d));
 
   if (c.status === 'unconfigured') {
@@ -140,7 +202,7 @@ function renderCard(c) {
       el(
         'div',
         { class: 'setup' },
-        d === 'compact' ? null : el('span', { text: 'Not set up yet.' }),
+        el('span', { text: 'Not set up yet.' }),
         el('button', { class: 'link-btn', text: d === 'compact' ? 'Set up' : 'Add key', 'aria-label': `Add key for ${c.name}`, onclick: () => openSettings(c.id) })
       )
     );
@@ -152,33 +214,43 @@ function renderCard(c) {
     return card;
   }
 
-  if (c.headline) {
-    card.append(el('div', { class: 'headline' }, el('span', { class: 'big', text: c.headline.value }), el('span', { class: 'lbl', text: c.headline.label || '' })));
-  }
+  if (c.headline) card.append(headlineEl(c, d));
 
   const meters = c.meters || [];
   const stats = c.stats || [];
   if (d === 'compact') {
-    // One thin bar for the most important limit; the rest is a click away in a bigger size.
-    if (meters[0]) card.append(meterEl(meters[0], false));
-    if (c.status === 'error') card.append(el('p', { class: 'err', text: 'error', title: c.error || '' }));
+    // One thin bar for the tightest limit and a footnote; hover shows the rest.
+    const t = tightest(c);
+    if (t) card.append(meterEl(t, false));
+    const foot = footEl(c);
+    if (foot) card.append(foot);
     return card;
   }
 
   for (const m of meters) card.append(meterEl(m));
 
   const shownStats = d === 'normal' ? stats.slice(0, 2) : stats;
-  if (shownStats.length) {
-    card.append(el('dl', { class: 'stats' }, shownStats.map((s) => el('div', {}, el('dt', { text: s.label }), el('dd', { text: s.value, title: s.value })))));
-  }
-
-  if (d === 'detailed' && c.spark && Array.isArray(c.spark.points) && c.spark.points.length > 1) {
-    card.append(sparkline(c.spark.points, c.spark.label), el('div', { class: 'spark-lbl', text: c.spark.label, 'aria-hidden': 'true' }));
-  }
+  if (shownStats.length) card.append(statsEl(shownStats, d === 'normal' ? '1fr' : null));
+  if (d === 'detailed') card.append(...sparkEls(c));
 
   if (c.error) card.append(el('p', { class: 'err', text: c.error }));
   if (d === 'detailed' && c.note) card.append(el('p', { class: 'note', text: c.note }));
   return card;
+}
+
+/** Everything about a card, for the hover peek over Compact and Normal tiles. */
+function fillPeek(node, c) {
+  node.dataset.status = c.status;
+  const head = el(
+    'header',
+    { class: 'card-head' },
+    el('span', { class: 'status-dot' }),
+    el('span', { class: 'card-name', text: c.name }),
+    el('span', { class: 'card-kind', text: c.kind === 'local' ? 'local' : 'api' }),
+    el('span', { class: 'card-age', text: ageText(c) })
+  );
+  const stats = c.stats || [];
+  node.replaceChildren(head, ...(c.meters || []).map((m) => meterEl(m)), stats.length ? statsEl(stats) : '', ...sparkEls(c), c.error ? el('p', { class: 'err', text: c.error }) : '');
 }
 
 function hiddenTools() {
@@ -195,9 +267,7 @@ function toolPicker() {
       { class: 'picker', id: 'tool-picker', role: 'group', 'aria-label': 'Add a tool' },
       el('div', { class: 'picker-title', text: 'Add a tool' }),
       hidden.map((p) => {
-        const b = el('button', { class: 'pick', onclick: () => showProvider(p.id) }, el('span', { class: 'swatch', 'aria-hidden': 'true' }), el('span', { text: p.name }), el('span', { class: 'card-kind', text: p.kind === 'local' ? 'local' : 'api' }));
-        b.style.setProperty('--accent', p.accent || '#888');
-        return b;
+        return el('button', { class: 'pick', onclick: () => showProvider(p.id) }, el('span', { class: 'swatch', 'aria-hidden': 'true' }), el('span', { text: p.name }), el('span', { class: 'card-kind', text: p.kind === 'local' ? 'local' : 'api' }));
       })
     ),
   ];
@@ -226,9 +296,24 @@ function announceChanges(cards) {
   if (msgs.length) $('#announcer').textContent = msgs.join('. ');
 }
 
-function render() {
-  const root = $('#cards');
+function sortByLimit() {
+  return state.meta.sortByLimit !== false;
+}
+
+/** Cards in display order: nearest limit first (stable), or the saved order as main sends it. */
+function orderedCards() {
   const cards = state.cards || [];
+  return sortByLimit() ? cards.slice().sort((a, b) => limitKey(a) - limitKey(b)) : cards;
+}
+
+function render() {
+  // Rebuilding the grid mid-drag would remove the element being dragged; catch up on dragend.
+  if (drag.id) {
+    drag.stale = true;
+    return;
+  }
+  const root = $('#cards');
+  const cards = orderedCards();
   const d = density();
   root.className = `cards density-${d}`;
   const tiles = cards.map(renderCard);
@@ -255,6 +340,10 @@ function render() {
   add.setAttribute('aria-label', add.title);
   add.setAttribute('aria-expanded', String(pickerOpen));
   $('#demo-banner').hidden = !state.meta.demo;
+  const sorted = sortByLimit();
+  $('#btn-sort').setAttribute('aria-pressed', String(sorted));
+  $('#sort-label').textContent = sorted ? 'Nearest limit' : 'Custom order';
+  if (peek.id && !$('#peek').hidden) placePeek(); // keep an open peek in step with new data
   scheduleFit();
   for (const b of document.querySelectorAll('#density button')) {
     const on = b.dataset.density === d;
@@ -262,6 +351,145 @@ function render() {
     b.tabIndex = on ? 0 : -1; // roving tabindex: one tab stop for the group
   }
 }
+
+// ---------- ordering: sort toggle, drag and Alt+arrow ----------
+const drag = { id: null, stale: false };
+
+async function setSortByLimit(on) {
+  state.meta.sortByLimit = on; // instant feedback; main confirms via state:update
+  render();
+  await api.saveSettings({ config: { sortByLimit: on } });
+}
+
+/** Move card `id` to where `targetId` is now, and save that as the custom order. */
+async function moveCard(id, targetId) {
+  const shown = orderedCards().map((c) => c.id);
+  const from = shown.indexOf(id);
+  const to = shown.indexOf(targetId);
+  if (from < 0 || to < 0 || from === to) return;
+  shown.splice(from, 1);
+  shown.splice(to, 0, id);
+  const byId = new Map(state.cards.map((c) => [c.id, c]));
+  state.cards = shown.map((x) => byId.get(x));
+  state.meta.sortByLimit = false;
+  render();
+  // Hidden tools keep their place at the end; config also appends any it doesn't know.
+  const rest = (state.meta.providers || []).map((p) => p.id).filter((x) => !shown.includes(x));
+  await api.saveSettings({ config: { order: [...shown, ...rest], sortByLimit: false } });
+}
+
+function cardOf(target) {
+  return target instanceof Element ? target.closest('#cards .card[data-id]') : null;
+}
+
+function clearDropTarget() {
+  for (const n of document.querySelectorAll('#cards .drop-target')) n.classList.remove('drop-target');
+}
+
+function endDrag() {
+  const wasStale = drag.stale;
+  drag.id = null;
+  drag.stale = false;
+  clearDropTarget();
+  for (const n of document.querySelectorAll('#cards .dragging')) n.classList.remove('dragging');
+  if (wasStale) render();
+}
+
+const cardsRoot = $('#cards');
+cardsRoot.addEventListener('dragstart', (e) => {
+  const card = cardOf(e.target);
+  if (!card) return;
+  drag.id = card.dataset.id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', drag.id);
+  hidePeek();
+  card.classList.add('dragging');
+});
+cardsRoot.addEventListener('dragover', (e) => {
+  const card = cardOf(e.target);
+  if (!drag.id || !card) return;
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  if (card.dataset.id !== drag.id && !card.classList.contains('drop-target')) {
+    clearDropTarget();
+    card.classList.add('drop-target');
+  }
+});
+cardsRoot.addEventListener('drop', (e) => {
+  const card = cardOf(e.target);
+  if (!drag.id || !card) return;
+  e.preventDefault();
+  const id = drag.id;
+  drag.id = null; // let moveCard render
+  endDrag();
+  moveCard(id, card.dataset.id);
+});
+cardsRoot.addEventListener('dragend', endDrag);
+
+// Keyboard alternative to dragging: Alt+arrow moves the focused card.
+cardsRoot.addEventListener('keydown', (e) => {
+  if (!e.altKey) return;
+  const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+  const card = cardOf(e.target);
+  if (!step || !card) return;
+  e.preventDefault();
+  const ids = orderedCards().map((c) => c.id);
+  const target = ids[ids.indexOf(card.dataset.id) + step];
+  if (!target) return;
+  const name = (state.cards.find((c) => c.id === card.dataset.id) || {}).name;
+  moveCard(card.dataset.id, target).then(() => {
+    $('#announcer').textContent = `${name} moved to position ${ids.indexOf(target) + 1} of ${ids.length}`;
+  });
+});
+
+// ---------- hover peek ----------
+const PEEK_DELAY = 380;
+const peek = { id: null, timer: 0 };
+
+function hidePeek() {
+  clearTimeout(peek.timer);
+  peek.id = null;
+  $('#peek').hidden = true;
+}
+
+/** Fill the peek for peek.id and float it below the tile (upper half) or above it (lower half). */
+function placePeek() {
+  const node = $('#peek');
+  const c = (state.cards || []).find((x) => x.id === peek.id);
+  const tile = c && cardsRoot.querySelector(`.card[data-id="${CSS.escape(c.id)}"]`);
+  if (!tile || settingsOpen) return hidePeek();
+  fillPeek(node, c);
+  node.hidden = false;
+  const r = tile.getBoundingClientRect();
+  const h = node.offsetHeight;
+  const gap = 6;
+  const min = cardsRoot.getBoundingClientRect().top;
+  const max = window.innerHeight - gap;
+  let top = r.top + r.height / 2 < (min + max) / 2 ? r.bottom + gap : r.top - gap - h;
+  // Keep it inside the window, even if that means covering the hovered tile.
+  top = Math.max(min, Math.min(top, max - h));
+  node.style.top = `${Math.round(top)}px`;
+}
+
+cardsRoot.addEventListener('mouseover', (e) => {
+  const card = cardOf(e.target);
+  if (!card || card.dataset.id === peek.id) return;
+  hidePeek();
+  const c = (state.cards || []).find((x) => x.id === card.dataset.id);
+  if (!c || density() === 'detailed' || drag.id || c.status === 'unconfigured' || !c.headline) return;
+  peek.id = c.id;
+  $('#peek').hidden = true;
+  peek.timer = setTimeout(() => {
+    if (peek.id === c.id && !drag.id) placePeek();
+  }, PEEK_DELAY);
+});
+cardsRoot.addEventListener('mouseout', (e) => {
+  const from = cardOf(e.target);
+  const to = cardOf(e.relatedTarget);
+  if (from && from !== to && !(to && to.dataset.id === from.dataset.id)) hidePeek();
+});
+cardsRoot.addEventListener('scroll', hidePeek);
+window.addEventListener('blur', hidePeek);
 
 // ---------- window fits its content ----------
 let fitTimer = 0;
@@ -296,6 +524,7 @@ function scheduleFit() {
 }
 
 async function setDensity(d) {
+  hidePeek();
   state.meta.density = d; // instant feedback; main confirms via state:update
   render();
   fitNow(); // resize in the same frame as the new layout instead of 30ms later
@@ -424,6 +653,8 @@ async function openSettings(focusId) {
 
   buildProviderFields(settingsData);
   settingsOpen = true;
+  hidePeek();
+  $('#toolbar').hidden = true;
   $('#cards').hidden = true;
   $('#settings').hidden = false;
   scheduleFit();
@@ -447,6 +678,7 @@ function closeSettings() {
   settingsOpen = false;
   const hadFocus = $('#settings').contains(document.activeElement);
   $('#settings').hidden = true;
+  $('#toolbar').hidden = false;
   $('#cards').hidden = false;
   render();
   // Focus would otherwise be lost on the now-hidden form.
@@ -513,6 +745,7 @@ $('#density').addEventListener('keydown', (e) => {
   const next = DENSITIES[(DENSITIES.indexOf(density()) + step + DENSITIES.length) % DENSITIES.length];
   setDensity(next).then(() => document.querySelector(`#density [data-density="${next}"]`).focus());
 });
+$('#btn-sort').addEventListener('click', () => setSortByLimit(!sortByLimit()));
 $('#btn-cancel').addEventListener('click', closeSettings);
 $('#settings-form').opacity.addEventListener('input', showOpacity);
 $('#settings-form').addEventListener('submit', saveSettings);

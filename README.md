@@ -66,16 +66,18 @@ You can also use environment variables instead: `ANTHROPIC_ADMIN_KEY`, `XAI_MANA
 - **Wayland:** native Wayland apps can't keep themselves on top or choose their position. The app therefore runs through XWayland by default ("Use XWayland on Wayland" in Settings).
 - **Opening a provider's page:** click a card's name to open its usage page in your browser.
 - **Window size:** the widget sizes its height to its content. It shrinks for Compact tiles and grows for Detailed cards or when you add a tool, up to the screen height; past that it scrolls. You set the width, and the grid reflows to it. A widget placed in the lower half of the screen grows upward. Turn this off with "Fit window height to its content" in Settings to size the window by hand.
-- **Card size:** the three buttons in the header switch every card between Compact (small tiles, about three per row), Normal (two per row) and Detailed (the full card, with chart and notes). The grid adds columns as you widen the window.
+- **What's left, first:** each card leads with what's left on its tightest limit (Codex shows whichever of the 5-hour and weekly limits is closer). Every tool uses the same green; a bar (and its number) turns red once 80% of the limit is used, i.e. 20% or less is left. Cards without a limit show tokens today.
+- **Card size:** Compact / Normal / Detailed, under the header, switch every card between small tiles (two per row, one number, one bar, one footnote), Normal (two per row) and Detailed (the full card, with chart and notes). The grid adds columns as you widen the window. Hover a Compact or Normal card for a moment to see its full detail.
+- **Order:** "Nearest limit" (on by default) puts the card closest to running out first. Drag a card, or focus it and press Alt+arrow keys, to set your own order instead; this switches the button to "Custom order". Click it again to go back to sorting by limit.
 - **Adding and hiding tools:** hover a card and click × to hide it. The + button in the header lists hidden tools at the top of the widget; click one to bring it back. The button is greyed out when every tool is shown. Settings still has a "Show on widget" checkbox for each tool.
 
 ## What the numbers mean (and their limits)
 
 - **Claude Code** counts tokens from your local transcripts, grouped into 5-hour blocks the same way the plan limits work.
   - Anthropic doesn't publish a usage-limit API for Pro/Max plans, so this card shows tokens and time, not a "% of limit".
-  - The bar shows how much of the 5-hour window has passed.
+  - The headline and bar show how much of the current 5-hour window is left.
 - **Codex** shows the rate-limit snapshot that the Codex CLI/IDE saves after each turn.
-  - It only updates when you use Codex. If a window has reset since your last use, the card shows 0% and says so.
+  - It only updates when you use Codex. If a window has reset since your last use, the card shows 100% left and says so.
   - Usage from ChatGPT web (Codex cloud tasks) only appears after a local session records it.
 - **Grok CLI** sums the usage each finished turn logs locally. The cost is what the CLI reports (the API-equivalent price), so on a grok.com subscription it isn't what you're billed. Key-based xAI spend is on the xAI API card.
 - **GitHub Copilot** uses the same undocumented endpoint as the Copilot editor extensions, so GitHub could change it without notice. Quotas marked unlimited show as a stat instead of a bar.

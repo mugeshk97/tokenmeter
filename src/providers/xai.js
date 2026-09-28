@@ -1,6 +1,6 @@
 'use strict';
 
-const { httpJson, startOfLocalMonth, num, fmtUSD, clampPct } = require('./util');
+const { httpJson, startOfLocalMonth, num, fmtUSD, clampPct, capHeadline, budgetMeter } = require('./util');
 
 const BASE = 'https://management-api.x.ai';
 
@@ -51,7 +51,9 @@ async function fetchXai({ managementKey, teamId, budget = 0 }, { fetchImpl, now 
   const warnings = [];
   const stats = [];
   const meters = [];
+  const caps = []; // spending caps, for the "left" headline
   let mtd = null;
+  let today = null;
   let spark = null;
 
   if (usageR.status === 'fulfilled') {
@@ -71,7 +73,8 @@ async function fetchXai({ managementKey, teamId, budget = 0 }, { fetchImpl, now 
     }
     const days = [...byDay.keys()].sort();
     mtd = days.reduce((acc, k) => acc + byDay.get(k), 0);
-    const today = days.length ? byDay.get(days[days.length - 1]) : 0;
+    today = days.length ? byDay.get(days[days.length - 1]) : 0;
+    stats.push({ label: 'Month to date', value: fmtUSD(mtd) });
     stats.push({ label: 'Today', value: fmtUSD(today) });
     stats.push({ label: 'Top model', value: top && top.sum > 0 ? shortModel(top.label) : '-' });
     spark = { label: 'USD / day, this month', points: days.map((k) => byDay.get(k)) };
@@ -88,6 +91,7 @@ async function fetchXai({ managementKey, teamId, budget = 0 }, { fetchImpl, now 
     stats.push({ label: 'Postpaid bill', value: fmtUSD(postpaid) });
     if (limit > 0) {
       meters.push({ label: `Spending limit ${fmtUSD(limit)}`, pct: clampPct((postpaid / limit) * 100), detail: `${fmtUSD(postpaid)} used` });
+      caps.push({ spent: postpaid, cap: limit, what: 'limit' });
     }
   } else {
     warnings.push(`Invoice: ${invoiceR.reason.message}`);
@@ -100,11 +104,15 @@ async function fetchXai({ managementKey, teamId, budget = 0 }, { fetchImpl, now 
   }
 
   if (budget > 0 && mtd !== null) {
-    meters.push({ label: `Monthly budget ${fmtUSD(budget)}`, pct: clampPct((mtd / budget) * 100), detail: `${Math.round((mtd / budget) * 100)}%` });
+    meters.push(budgetMeter(mtd, budget));
+    caps.push({ spent: mtd, cap: budget, what: 'budget' });
   }
 
+  // Lead with the cap closest to running out; without one, month to date.
+  const tight = caps.sort((a, b) => b.spent / b.cap - a.spent / a.cap)[0];
   return {
-    headline: { value: mtd === null ? '-' : fmtUSD(mtd), label: 'month to date' },
+    headline: tight ? capHeadline(tight.spent, tight.cap, tight.what) : { value: mtd === null ? '-' : fmtUSD(mtd), label: 'month to date' },
+    foot: tight ? `${fmtUSD(tight.spent)} ${tight.what === 'limit' ? 'billed' : 'spent'} this month` : today !== null ? `${fmtUSD(today)} today` : null,
     meters,
     stats,
     spark,

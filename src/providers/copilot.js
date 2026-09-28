@@ -46,14 +46,14 @@ async function fetchCopilot({ token }, { fetchImpl, now = new Date() } = {}) {
     if (entitlement <= 0) continue;
     const remaining = num(q.remaining ?? q.quota_remaining);
     const pct = clampPct(q.percent_remaining != null ? 100 - num(q.percent_remaining) : ((entitlement - remaining) / entitlement) * 100);
-    const used = Math.max(0, Math.round(entitlement - remaining));
-    meters.push({ key, label, pct, detail: `${used}/${entitlement}${resetText ? ` · ${resetText}` : ''}` });
+    const left = Math.max(0, Math.round(entitlement - (pct / 100) * entitlement));
+    meters.push({ key, label, pct, detail: `${left}/${entitlement} left${resetMs ? ` · ${fmtDuration(resetMs - nowMs)}` : ''}` });
   }
 
   // Premium requests matter most; otherwise show whichever quota is closest to running out.
   const main = meters.find((m) => m.key === 'premium_interactions') || [...meters].sort((a, b) => b.pct - a.pct)[0];
   const headline = main
-    ? { value: `${Math.round(main.pct)}%`, label: `${main.label.toLowerCase()} used` }
+    ? { value: `${Math.round(100 - main.pct)}%`, label: `${main.label.toLowerCase()} left`, short: `${main.label.split(' ')[0].toLowerCase()} left` }
     : { value: '-', label: 'no metered quota' };
 
   const plan = user.access_type_sku || user.copilot_plan;
@@ -63,6 +63,7 @@ async function fetchCopilot({ token }, { fetchImpl, now = new Date() } = {}) {
 
   return {
     headline,
+    foot: resetText || (plan ? String(plan).replace(/_/g, ' ') : null),
     meters: meters.map(({ key: _k, ...m }) => m),
     stats,
     spark: null,

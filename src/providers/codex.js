@@ -119,6 +119,7 @@ async function fetchCodex({ home } = {}, { now = new Date() } = {}) {
 
   const meters = [];
   let headline = { value: fmtTokens(tokensToday), label: 'tokens today' };
+  let foot = null;
   let plan = null;
   let credits = null;
 
@@ -139,16 +140,22 @@ async function fetchCodex({ home } = {}, { now = new Date() } = {}) {
       })
       .filter(Boolean);
 
+    let tight = null;
     for (const w of windows) {
       const expired = w.resetsAt !== null && w.resetsAt <= nowMs;
       const pct = expired ? 0 : clampPct(w.pct);
-      meters.push({
-        label: w.label,
-        pct,
-        detail: expired ? 'reset since last use' : w.resetsAt ? `${Math.round(pct)}% · resets in ${fmtDuration(w.resetsAt - nowMs)}` : `${Math.round(pct)}%`,
-      });
+      const left = Math.round(100 - pct);
+      const inTime = w.resetsAt ? fmtDuration(w.resetsAt - nowMs) : '';
+      const resets = expired ? 'reset since last use' : inTime ? `resets in ${inTime}` : '';
+      meters.push({ label: w.label, pct, detail: expired ? resets : [`${left}% left`, inTime].filter(Boolean).join(' · ') });
+      if (!tight || pct > tight.pct) tight = { pct, left, label: w.label, resets };
     }
-    if (meters.length) headline = { value: `${Math.round(meters[0].pct)}%`, label: `${meters[0].label.toLowerCase()} used` };
+    // Lead with whichever limit is closest to running out.
+    if (tight) {
+      const what = tight.label === 'Weekly limit' ? 'this week' : `in ${tight.label.toLowerCase()}`;
+      headline = { value: `${tight.left}%`, label: `left ${what}`, short: `left · ${tight.label.toLowerCase()}` };
+      foot = tight.resets || null;
+    }
   }
 
   const stats = [
@@ -160,6 +167,7 @@ async function fetchCodex({ home } = {}, { now = new Date() } = {}) {
 
   return {
     headline,
+    foot: foot || 'no limit data yet',
     meters,
     stats,
     spark: null,

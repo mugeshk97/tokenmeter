@@ -196,6 +196,7 @@ button {
 
 .icon:active:not(:disabled),
 .seg button:active,
+.sort:active,
 .card-hide:active,
 .pick:active,
 .link-btn:active,
@@ -257,28 +258,34 @@ button {
   border-bottom: 1px solid var(--border);
 }
 
-/* ---- Card size switch (header) ---- */
+/* ---- Toolbar: card size switch + sort toggle ---- */
+.toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-8);
+  padding: var(--sp-8) var(--sp-8) 0;
+}
+
 .seg {
   display: flex;
   gap: 1px;
   padding: var(--sp-2);
-  margin-left: auto;
   border-radius: var(--radius-sm);
   background: var(--panel-2);
   border: 1px solid var(--border);
-  -webkit-app-region: no-drag;
 }
 
 .seg button {
-  width: 24px;
-  height: 24px;
+  height: 22px;
+  padding: 0 9px;
   transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
-  display: grid;
-  place-items: center;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 4px;
   background: transparent;
   color: var(--muted);
+  font-size: var(--text-xs);
   cursor: pointer;
 }
 
@@ -289,20 +296,43 @@ button {
 .seg button[aria-checked='true'] {
   background: var(--panel);
   color: var(--text);
+  font-weight: 600;
   box-shadow: var(--shadow-sm);
 }
 
-.seg svg {
-  width: 14px;
-  height: 14px;
+.sort {
+  height: 26px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 var(--sp-8) 0 var(--sp-6);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, border-color var(--dur-fast) ease;
+}
+
+.sort:hover {
+  color: var(--text);
+}
+
+.sort[aria-pressed='true'] {
+  background: color-mix(in srgb, var(--focus) 14%, transparent);
+  border-color: color-mix(in srgb, var(--focus) 40%, var(--border));
+  color: var(--focus);
+}
+
+.sort svg {
+  width: 13px;
+  height: 13px;
   fill: none;
   stroke: currentColor;
   stroke-width: 2;
-}
-
-.seg button[aria-checked='true'] svg {
-  fill: currentColor;
-  fill-opacity: 0.25;
+  stroke-linecap: round;
 }
 
 /* ---- Cards grid ---- */
@@ -320,8 +350,7 @@ button {
 }
 
 .cards.density-compact {
-  --tile-min: 92px;
-  gap: var(--sp-6);
+  --tile-min: 140px; /* two tiles per row at the default width */
 }
 
 .cards.density-detailed {
@@ -340,7 +369,7 @@ button {
 }
 
 .card {
-  --accent: var(--muted); /* fallback until a card sets its provider color */
+  --accent: var(--good); /* one product color for every tool */
   position: relative;
   min-width: 0;
   background:
@@ -352,7 +381,45 @@ button {
   display: flex;
   flex-direction: column;
   gap: var(--sp-8);
-  transition: border-color var(--dur-fast) ease;
+  cursor: grab;
+  transition: border-color var(--dur-fast) ease, opacity var(--dur-fast) ease;
+}
+
+.card[data-status='unconfigured'] {
+  background: transparent;
+  border-style: dashed;
+}
+
+.card[data-status='unconfigured']::before {
+  opacity: 0.35;
+}
+
+/* Drag to reorder */
+.card.dragging {
+  opacity: 0.35;
+}
+
+.card.drop-target {
+  box-shadow: 0 0 0 2px var(--focus);
+}
+
+.grip {
+  position: absolute;
+  left: 3px;
+  top: 17px;
+  width: 6px;
+  height: 10px;
+  fill: var(--muted);
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+}
+
+.card:not(.card-compact):hover .grip {
+  opacity: 1;
+}
+
+.card:not(.card-compact):hover::before {
+  opacity: 0; /* the grip takes the accent strip's place */
 }
 
 .card::before {
@@ -515,6 +582,15 @@ button {
   color: var(--muted);
 }
 
+/* The number turns amber/red as the tightest limit runs low. */
+.headline .big.warn {
+  color: var(--warn);
+}
+
+.headline .big.bad {
+  color: var(--bad);
+}
+
 .meter-row {
   display: flex;
   justify-content: space-between;
@@ -640,19 +716,30 @@ button {
   grid-template-columns: 1fr;
 }
 
-/* Compact tiles: name, big number, one thin bar. */
+/* Compact tiles: name, big number, one thin bar, one footnote. */
 .card-compact {
-  padding: var(--sp-8) var(--sp-8) var(--sp-8);
-  gap: var(--sp-4);
-  border-radius: var(--radius-md);
+  padding: 9px var(--sp-10) var(--sp-10) var(--sp-12);
+  gap: 3px;
+  border-radius: var(--sp-10);
 }
 
 .card-compact::before {
-  margin: var(--sp-8) 0;
+  margin: 9px 0;
 }
 
 .card-compact .card-name {
+  min-height: 20px;
   font-size: var(--text-xs);
+}
+
+.card-compact .card-hide {
+  width: 22px;
+  height: 22px;
+}
+
+.card-compact .card-hide svg {
+  width: 11px;
+  height: 11px;
 }
 
 .card-compact .headline {
@@ -661,7 +748,7 @@ button {
 }
 
 .card-compact .headline .big {
-  font-size: var(--text-lg);
+  line-height: 1.15;
 }
 
 .card-compact .headline .lbl {
@@ -674,14 +761,53 @@ button {
 
 .card-compact .bar {
   height: 4px;
+  margin-top: 3px;
+}
+
+.foot {
+  margin: auto 0 0;
+  padding-top: var(--sp-2);
+  font-size: var(--text-2xs);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.foot.err {
+  color: var(--bad);
 }
 
 .card-compact .setup {
-  justify-content: flex-start;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-6);
+  font-size: var(--text-xs);
 }
 
-.card-compact .err {
-  font-size: var(--text-2xs);
+.card-compact .link-btn {
+  padding: 3px var(--sp-8);
+}
+
+/* ---- Hover peek: the full card, floated above or below the hovered tile ---- */
+.peek {
+  position: fixed;
+  left: 9px; /* body border + grid padding */
+  right: 9px;
+  z-index: 5;
+  pointer-events: none;
+  cursor: default;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35), 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+.peek::before {
+  display: none;
+}
+
+.peek .card-head {
+  padding-right: 0;
 }
 
 .skeleton {
@@ -723,7 +849,7 @@ button {
 }
 
 .pick {
-  --accent: var(--muted); /* fallback until a card sets its provider color */
+  --accent: var(--good); /* one product color for every tool */
   min-height: 32px;
   display: flex;
   align-items: center;
