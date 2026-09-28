@@ -2,7 +2,7 @@
 
 _Formerly "AI Usage Widget". On first start, Tokenmeter copies your settings from `~/.config/AI Usage Widget` and replaces the old start-at-login entry. Saved keys may need re-entering, because the system keyring entry is tied to the app name._
 
-A small always-on-top Electron widget for Linux, Windows and macOS that keeps your AI usage visible on the desktop:
+A small always-on-top Electron widget for Linux (Debian/Ubuntu), Windows and macOS that keeps your AI usage visible on the desktop:
 
 | Card | Source | Needs | Shows |
 |---|---|---|---|
@@ -45,11 +45,9 @@ The repository is signed with key `51E7 3671 79B2 798A B250  5D10 7CFF 9452 0564
 
 ```bash
 npm run dist
-# → dist/tokenmeter-1.0.0-x86_64.AppImage
 # → dist/tokenmeter-1.0.0-amd64.deb
 
 sudo apt install ./dist/tokenmeter-1.0.0-amd64.deb
-# or: chmod +x dist/*.AppImage && ./dist/tokenmeter-1.0.0-x86_64.AppImage
 ```
 
 **Windows:** `npm run dist` → `dist/tokenmeter-1.0.0-setup-x64.exe`. The installer isn't code-signed yet, so SmartScreen warns about an unknown publisher: click **More info → Run anyway**.
@@ -64,8 +62,9 @@ Local tool folders are the same on every OS, under your home folder (`~/.claude`
 
 | Install | What happens |
 |---|---|
-| Windows installer, Linux AppImage | Downloads in the background and installs when you quit (or click the update icon to restart now) |
-| Linux `.deb`, macOS | The update icon opens the download page (the `.deb` would need a root password; macOS needs a signed app to update itself) |
+| Windows installer | Downloads in the background and installs when you quit (or click the update icon to restart now) |
+| Linux `.deb` | Updates arrive through Software Updater / `sudo apt upgrade` from the apt repository above; the update icon links to the apt setup if you installed the `.deb` by hand |
+| macOS | The update icon opens the download page (macOS needs a signed app to update itself) |
 
 Turn off **Install updates automatically** in Settings to always just be told.
 

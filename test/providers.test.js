@@ -495,12 +495,13 @@ test('expandHome: ~ followed by / or \\ (Windows), nothing else', () => {
 
 // ---------------------------------------------------------------- Updater
 const { EventEmitter } = require('events');
-const { Updater, updateMode, RELEASES_URL } = require('../src/updater');
+const { Updater, updateMode, updateHelpUrl, RELEASES_URL, APT_URL } = require('../src/updater');
 
 test('updateMode: self-updating installs vs notify-only', () => {
   assert.equal(updateMode({ platform: 'win32' }), 'auto');
-  assert.equal(updateMode({ platform: 'linux', appImage: '/tmp/Tokenmeter.AppImage' }), 'auto');
-  assert.equal(updateMode({ platform: 'linux' }), 'notify'); // .deb
+  assert.equal(updateMode({ platform: 'linux' }), 'notify'); // .deb: apt installs updates
+  assert.equal(updateHelpUrl('linux'), APT_URL);
+  assert.equal(updateHelpUrl('darwin'), RELEASES_URL);
   assert.equal(updateMode({ platform: 'darwin' }), 'notify'); // unsigned Mac
   assert.equal(updateMode({ platform: 'win32', autoInstall: false }), 'notify');
 });

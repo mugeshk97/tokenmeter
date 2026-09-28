@@ -592,7 +592,12 @@ function renderUpdate() {
   btn.hidden = !show;
   $('#refresh-ring').hidden = show;
   if (!show) return;
-  const label = u.status === 'ready' ? `Update ${u.version} is ready. Click to restart and install it.` : `Update ${u.version} is available. Click to open the download page.`;
+  const label =
+    u.status === 'ready'
+      ? `Update ${u.version} is ready. Click to restart and install it.`
+      : u.platform === 'linux'
+        ? `Update ${u.version} is available through Software Updater (or sudo apt upgrade). Click for apt setup.`
+        : `Update ${u.version} is available. Click to open the download page.`;
   btn.title = label;
   btn.setAttribute('aria-label', label);
 }

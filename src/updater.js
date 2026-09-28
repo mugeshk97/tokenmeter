@@ -1,23 +1,28 @@
 'use strict';
 
-// Auto-update from GitHub Releases (electron-updater). Installs that can replace themselves
-// (Windows installer, Linux AppImage) download in the background and install on restart; the
-// others (Linux .deb, macOS until the app is signed with a Developer ID) only say an update is out
-// and link to the download page.
+// Auto-update from GitHub Releases (electron-updater). The Windows installer downloads in the
+// background and installs on restart. Elsewhere the app only says an update is out: Linux .deb
+// installs update through apt (the repo on GitHub Pages), and macOS can't replace itself until the
+// app is signed with a Developer ID, so it links to the download page.
 
 const RELEASES_URL = 'https://github.com/mugeshk97/tokenmeter/releases/latest';
+const APT_URL = 'https://mugeshk97.github.io/tokenmeter/'; // apt setup instructions
 const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 const FIRST_CHECK_MS = 15 * 1000;
 
 /**
- * 'auto' when this install can update itself, 'notify' when it can only point at the download.
- * @param {{ platform: string, appImage?: string, autoInstall?: boolean }} env
+ * 'auto' when this install can update itself, 'notify' when it can only say an update is out.
+ * @param {{ platform: string, autoInstall?: boolean }} env
  */
-function updateMode({ platform, appImage, autoInstall = true }) {
+function updateMode({ platform, autoInstall = true }) {
   if (!autoInstall) return 'notify';
   if (platform === 'win32') return 'auto';
-  if (platform === 'linux' && appImage) return 'auto'; // a .deb would need a root password prompt
-  return 'notify'; // macOS: Squirrel.Mac only installs apps signed with a Developer ID
+  return 'notify'; // Linux: apt installs it; macOS: Squirrel.Mac needs a Developer ID signature
+}
+
+/** Where the update button points when this install can't update itself. */
+function updateHelpUrl(platform) {
+  return platform === 'linux' ? APT_URL : RELEASES_URL;
 }
 
 class Updater {
@@ -33,7 +38,7 @@ class Updater {
     this.onChange = onChange;
     this.openExternal = openExternal;
     this.au = autoUpdater || require('electron-updater').autoUpdater;
-    this.state = { status: 'idle', version: null, mode: this.mode() };
+    this.state = { status: 'idle', version: null, mode: this.mode(), platform: process.platform };
     this.timers = [];
 
     this.au.autoDownload = false; // decided per check, from the mode
@@ -54,7 +59,7 @@ class Updater {
   }
 
   mode() {
-    return updateMode({ platform: process.platform, appImage: process.env.APPIMAGE, autoInstall: this.getAutoInstall() });
+    return updateMode({ platform: process.platform, autoInstall: this.getAutoInstall() });
   }
 
   set(patch) {
@@ -86,8 +91,8 @@ class Updater {
   /** The header button: restart into a downloaded update, or open the download page. */
   act() {
     if (this.state.status === 'ready') this.au.quitAndInstall();
-    else if (this.state.status === 'available') this.openExternal(RELEASES_URL);
+    else if (this.state.status === 'available') this.openExternal(updateHelpUrl(process.platform));
   }
 }
 
-module.exports = { Updater, updateMode, RELEASES_URL };
+module.exports = { Updater, updateMode, updateHelpUrl, RELEASES_URL, APT_URL };

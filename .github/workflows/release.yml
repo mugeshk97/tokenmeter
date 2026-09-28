@@ -79,7 +79,7 @@ jobs:
           assets=$(gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')
           echo "$assets"
           missing=0
-          for pattern in '^latest\.yml$' '^latest-linux\.yml$' '^latest-mac\.yml$' '\.deb$' '\.AppImage$' 'setup-x64\.exe$' 'arm64\.dmg$' 'x64\.dmg$' 'arm64\.zip$' 'x64\.zip$'; do
+          for pattern in '^latest\.yml$' '^latest-linux\.yml$' '^latest-mac\.yml$' '\.deb$' 'setup-x64\.exe$' 'arm64\.dmg$' 'x64\.dmg$' 'arm64\.zip$' 'x64\.zip$'; do
             echo "$assets" | grep -Eq "$pattern" || { echo "missing: $pattern"; missing=1; }
           done
           exit $missing
