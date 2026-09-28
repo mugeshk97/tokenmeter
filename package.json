@@ -2,16 +2,19 @@
   "name": "tokenmeter",
   "productName": "Tokenmeter",
   "version": "1.0.0",
-  "description": "Always-on desktop meter for Claude, Codex, Grok, Copilot and Gemini usage on Linux",
+  "description": "Always-on desktop meter for Claude, Codex, Grok, Copilot and Gemini usage on Linux, Windows and macOS",
   "main": "src/main.js",
   "author": "Mugesh Kannan K S",
   "license": "MIT",
   "private": true,
   "scripts": {
     "start": "electron .",
-    "demo": "AIU_DEMO=1 electron .",
+    "demo": "electron . --demo",
     "test": "node --test",
-    "dist": "electron-builder --linux AppImage deb"
+    "dist": "electron-builder",
+    "dist:linux": "electron-builder --linux",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac"
   },
   "devDependencies": {
     "electron": "^44.4.5",
@@ -34,6 +37,47 @@
       "icon": "assets/icon512.png",
       "synopsis": "AI token and quota usage on your desktop",
       "maintainer": "Mugesh Kannan K S"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon512.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "artifactName": "${name}-${version}-setup-${arch}.${ext}"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "category": "public.app-category.utilities",
+      "icon": "assets/icon512.png",
+      "identity": "-",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "LSUIElement": true
+      }
     },
     "artifactName": "${name}-${version}-${arch}.${ext}",
     "publish": null

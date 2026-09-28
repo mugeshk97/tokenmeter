@@ -646,6 +646,7 @@ async function openSettings(focusId) {
   f.alwaysOnTop.checked = Boolean(c.alwaysOnTop);
   f.startAtLogin.checked = Boolean(c.startAtLogin);
   f.forceX11.checked = Boolean(c.forceX11);
+  f.forceX11.closest('label').hidden = settingsData.platform !== 'linux'; // XWayland is Linux-only
   f.opacity.value = c.opacity;
   showOpacity();
   f.theme.value = c.theme || 'system';
@@ -655,7 +656,7 @@ async function openSettings(focusId) {
   const encEl = $('#enc-status');
   if (enc.weak) {
     encEl.className = 'hint warn';
-    encEl.textContent = `No system keyring found (backend: ${enc.backend}). Keys are saved in a user-only file without real encryption. Install gnome-keyring or KWallet for proper encryption.`;
+    encEl.textContent = `No system keyring found (backend: ${enc.backend}). Keys are saved in a user-only file without real encryption.${settingsData.platform === 'linux' ? ' Install gnome-keyring or KWallet for proper encryption.' : ''}`;
   } else {
     encEl.className = 'hint';
     encEl.textContent = `Keys are encrypted with your system keyring (${enc.backend}).`;

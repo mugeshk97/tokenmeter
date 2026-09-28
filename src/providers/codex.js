@@ -3,10 +3,10 @@
 const os = require('os');
 const path = require('path');
 const { JsonlCache, listJsonl, exists } = require('./localfiles');
-const { num, fmtTokens, fmtDuration, fmtAgo, clampPct, startOfLocalDay, DAY } = require('./util');
+const { num, fmtTokens, fmtDuration, fmtAgo, clampPct, startOfLocalDay, DAY, expandHome } = require('./util');
 
 function codexHome(override) {
-  if (override) return override.replace(/^~(?=$|\/)/, os.homedir());
+  if (override) return expandHome(override);
   if (process.env.CODEX_HOME) return process.env.CODEX_HOME;
   return path.join(os.homedir(), '.codex');
 }

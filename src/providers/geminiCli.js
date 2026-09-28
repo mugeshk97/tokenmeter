@@ -4,10 +4,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { exists } = require('./localfiles');
-const { num, fmtTokens, fmtAgo, startOfLocalDay, HOUR, DAY } = require('./util');
+const { num, fmtTokens, fmtAgo, startOfLocalDay, HOUR, DAY, expandHome } = require('./util');
 
 function geminiHome(override) {
-  if (override) return override.replace(/^~(?=$|\/)/, os.homedir());
+  if (override) return expandHome(override);
   return path.join(os.homedir(), '.gemini');
 }
 

@@ -481,3 +481,14 @@ test('poller: keeps last good data when a refresh fails', async () => {
   assert.equal(last[0].headline.value, '$1.00');
   assert.equal(last[0].error, 'Rate limited');
 });
+
+// ---------------------------------------------------------------- paths
+test('expandHome: ~ followed by / or \\ (Windows), nothing else', () => {
+  const { expandHome } = require('../src/providers/util');
+  const home = os.homedir();
+  assert.equal(expandHome('~'), home);
+  assert.equal(expandHome(' ~/.codex '), `${home}/.codex`);
+  assert.equal(expandHome('~\\.codex'), `${home}\\.codex`);
+  assert.equal(expandHome('~other/x'), '~other/x');
+  assert.equal(expandHome('/abs/~/x'), '/abs/~/x');
+});

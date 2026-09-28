@@ -1,6 +1,9 @@
 'use strict';
 
-const UA = 'tokenmeter/1.0 (+linux desktop)';
+const os = require('os');
+const { version } = require('../../package.json');
+
+const UA = `tokenmeter/${version} (${process.platform})`;
 const HOUR = 3600 * 1000;
 const DAY = 24 * HOUR;
 
@@ -154,6 +157,11 @@ function budgetMeter(spent, budget) {
   return { label: `Monthly budget ${fmtUSD(budget)}`, pct, detail: `${Math.round(100 - pct)}% left` };
 }
 
+/** Expand a leading ~ in a user-entered folder, with / or \\ after it (Windows). */
+function expandHome(p) {
+  return String(p).trim().replace(/^~(?=$|[\\/])/, os.homedir());
+}
+
 function clampPct(p) {
   const n = num(p);
   return Math.max(0, Math.min(100, n));
@@ -180,4 +188,5 @@ module.exports = {
   fmtDuration,
   fmtAgo,
   clampPct,
+  expandHome,
 };

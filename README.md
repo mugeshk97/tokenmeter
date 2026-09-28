@@ -2,7 +2,7 @@
 
 _Formerly "AI Usage Widget". On first start, Tokenmeter copies your settings from `~/.config/AI Usage Widget` and replaces the old start-at-login entry. Saved keys may need re-entering, because the system keyring entry is tied to the app name._
 
-A small always-on-top Electron widget for Linux that keeps your AI usage visible on the desktop:
+A small always-on-top Electron widget for Linux, Windows and macOS that keeps your AI usage visible on the desktop:
 
 | Card | Source | Needs | Shows |
 |---|---|---|---|
@@ -29,6 +29,10 @@ npm test           # provider/parser tests (no network)
 
 ## Install as an app
 
+`npm run dist` builds installers for the OS you run it on (each OS builds its own).
+
+**Linux**
+
 ```bash
 npm run dist
 # → dist/tokenmeter-1.0.0-x86_64.AppImage
@@ -38,7 +42,13 @@ sudo apt install ./dist/tokenmeter-1.0.0-amd64.deb
 # or: chmod +x dist/*.AppImage && ./dist/tokenmeter-1.0.0-x86_64.AppImage
 ```
 
-Then tick **Start at login** in Settings (or the tray menu). This writes `~/.config/autostart/tokenmeter.desktop`.
+**Windows:** `npm run dist` → `dist/tokenmeter-1.0.0-setup-x64.exe`. The installer isn't code-signed yet, so SmartScreen warns about an unknown publisher: click **More info → Run anyway**.
+
+**macOS:** `npm run dist` → `dist/tokenmeter-1.0.0-arm64.dmg` (Apple Silicon) and `-x64.dmg` (Intel). The app isn't signed with an Apple Developer ID yet, so the first launch needs right-click → **Open** (or `xattr -dr com.apple.quarantine /Applications/Tokenmeter.app`). It runs from the menu bar, with no Dock icon.
+
+Then tick **Start at login** in Settings (or the tray menu). On Linux this writes `~/.config/autostart/tokenmeter.desktop`; on Windows and macOS it uses the system login items.
+
+Local tool folders are the same on every OS, under your home folder (`~/.claude`, `~/.codex`, `~/.grok`, `~/.gemini`, e.g. `C:\Users\you\.codex` on Windows).
 
 ## Getting the keys
 
@@ -61,9 +71,9 @@ You can also use environment variables instead: `ANTHROPIC_ADMIN_KEY`, `XAI_MANA
 ## Desktop notes
 
 - **Moving it:** drag the header. The window position and size are remembered.
-- **Closing it:** × hides the widget to the tray. The tray menu has Show/Hide, Refresh, Always on top, Start at login, Settings and Quit. Launching the app again also brings the widget back.
-- **GNOME tray icon:** GNOME needs the *AppIndicator and KStatusNotifierItem Support* extension to show it. Ubuntu ships this by default.
-- **Wayland:** native Wayland apps can't keep themselves on top or choose their position. The app therefore runs through XWayland by default ("Use XWayland on Wayland" in Settings).
+- **Closing it:** × hides the widget to the tray (the menu bar on macOS). The tray menu has Show/Hide, Refresh, Always on top, Start at login, Settings and Quit. Launching the app again also brings the widget back.
+- **GNOME tray icon (Linux):** GNOME needs the *AppIndicator and KStatusNotifierItem Support* extension to show it. Ubuntu ships this by default.
+- **Wayland (Linux):** native Wayland apps can't keep themselves on top or choose their position. The app therefore runs through XWayland by default ("Use XWayland on Wayland" in Settings).
 - **Opening a provider's page:** click a card's name to open its usage page in your browser.
 - **Window size:** the widget sizes its height to its content. It shrinks for Compact tiles and grows for Detailed cards or when you add a tool, up to the screen height; past that it scrolls. You set the width, and the grid reflows to it. A widget placed in the lower half of the screen grows upward. Turn this off with "Fit window height to its content" in Settings to size the window by hand.
 - **What's left, first:** each card leads with what's left on its tightest limit (Codex shows whichever of the 5-hour and weekly limits is closer). Every tool uses the same green; a bar (and its number) turns red once 80% of the limit is used, i.e. 20% or less is left. Cards without a limit show tokens today.

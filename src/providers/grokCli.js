@@ -3,12 +3,12 @@
 const os = require('os');
 const path = require('path');
 const { JsonlCache, listJsonl, exists } = require('./localfiles');
-const { num, fmtTokens, fmtUSD, fmtAgo, startOfLocalDay, startOfLocalMonth, HOUR } = require('./util');
+const { num, fmtTokens, fmtUSD, fmtAgo, startOfLocalDay, startOfLocalMonth, HOUR, expandHome } = require('./util');
 
 const TICKS_PER_USD = 1e10;
 
 function grokHome(override) {
-  if (override) return override.replace(/^~(?=$|\/)/, os.homedir());
+  if (override) return expandHome(override);
   return path.join(os.homedir(), '.grok');
 }
 

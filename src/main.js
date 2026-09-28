@@ -10,7 +10,7 @@ const { setAutostart } = require('./autostart');
 
 const ASSETS = path.join(__dirname, '..', 'assets');
 const MIN_HEIGHT = 110;
-const DEMO = process.env.AIU_DEMO === '1';
+const DEMO = process.env.AIU_DEMO === '1' || process.argv.includes('--demo'); // flag form works in any shell
 const SCREENSHOT = process.env.AIU_SCREENSHOT || '';
 
 // --- Pre-ready setup -------------------------------------------------------
@@ -138,7 +138,8 @@ function createWindow() {
       spellcheck: false,
     },
   });
-  win.setVisibleOnAllWorkspaces(true);
+  // visibleOnFullScreen: on macOS, stay visible over full-screen apps too.
+  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   win.setOpacity(Number(store.config.opacity) || 1);
   win.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
@@ -252,10 +253,24 @@ function trayTooltip(cards) {
   return lines.length ? lines.join('\n') : 'Tokenmeter';
 }
 
+/**
+ * Tray icon at the size each OS draws it: 16px on Windows, 18pt in the macOS menu bar,
+ * 22px on Linux panels. The 2x version keeps it sharp on HiDPI screens.
+ */
+function trayImage() {
+  const size = { win32: 16, darwin: 18 }[process.platform];
+  if (!size) return nativeImage.createFromPath(path.join(ASSETS, 'tray.png')); // picks tray@2x.png itself
+  const img = nativeImage.createEmpty();
+  for (const [file, scaleFactor] of [['tray.png', 1], ['tray@2x.png', 2]]) {
+    const src = nativeImage.createFromPath(path.join(ASSETS, file)).resize({ width: size * scaleFactor, height: size * scaleFactor, quality: 'best' });
+    img.addRepresentation({ scaleFactor, width: size * scaleFactor, height: size * scaleFactor, buffer: src.toPNG() });
+  }
+  return img;
+}
+
 function createTray() {
   try {
-    const img = nativeImage.createFromPath(path.join(ASSETS, 'tray.png'));
-    tray = new Tray(img);
+    tray = new Tray(trayImage());
     tray.setToolTip('Tokenmeter');
     tray.on('click', toggleWindow);
     buildTrayMenu();
@@ -295,6 +310,7 @@ function settingsPayload() {
     encryption: store.encryptionInfo(),
     providers: PROVIDERS.map((p) => ({ id: p.id, name: p.name, kind: p.kind, secrets: p.secrets, env: p.env || {} })),
     session: process.env.XDG_SESSION_TYPE || 'unknown',
+    platform: process.platform,
   };
 }
 
@@ -419,6 +435,8 @@ function registerIpc() {
 app.on('second-instance', () => showWindow());
 
 app.whenReady().then(() => {
+  // A desktop widget lives in the menu bar, not the Dock (macOS).
+  if (process.platform === 'darwin' && app.dock) app.dock.hide();
   store = new Store(app.getPath('userData'), safeStorage);
   applyTheme();
   // Rewrite the login entry on each start: it moves the pre-rename file to tokenmeter.desktop

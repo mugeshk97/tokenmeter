@@ -82,11 +82,12 @@ class Store {
   encryptionInfo() {
     const ss = this.safeStorage;
     const available = Boolean(ss && ss.isEncryptionAvailable && ss.isEncryptionAvailable());
-    let backend = 'unknown';
+    // Only Linux has a choice of backends; macOS and Windows always use the OS store.
+    let backend = { darwin: 'macOS Keychain', win32: 'Windows DPAPI' }[process.platform] || 'unknown';
     try {
-      if (ss && ss.getSelectedStorageBackend) backend = ss.getSelectedStorageBackend();
+      if (process.platform === 'linux' && ss && ss.getSelectedStorageBackend) backend = ss.getSelectedStorageBackend();
     } catch {
-      /* not on linux */
+      /* older Electron */
     }
     // 'basic_text' means Chromium fell back to a hard-coded password: effectively obfuscation only.
     const weak = !available || backend === 'basic_text';

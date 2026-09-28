@@ -3,14 +3,13 @@
 const os = require('os');
 const path = require('path');
 const { JsonlCache, listJsonl, exists } = require('./localfiles');
-const { num, fmtTokens, fmtDuration, fmtAgo, floorHour, startOfLocalDay, HOUR, DAY } = require('./util');
+const { num, fmtTokens, fmtDuration, fmtAgo, floorHour, startOfLocalDay, expandHome, HOUR, DAY } = require('./util');
 
 const BLOCK_MS = 5 * HOUR;
 
 function claudeDirs(override) {
-  const expand = (p) => p.trim().replace(/^~(?=$|\/)/, os.homedir());
-  if (override) return override.split(',').map(expand).filter(Boolean);
-  if (process.env.CLAUDE_CONFIG_DIR) return process.env.CLAUDE_CONFIG_DIR.split(',').map(expand).filter(Boolean);
+  if (override) return override.split(',').map(expandHome).filter(Boolean);
+  if (process.env.CLAUDE_CONFIG_DIR) return process.env.CLAUDE_CONFIG_DIR.split(',').map(expandHome).filter(Boolean);
   return [path.join(os.homedir(), '.config', 'claude'), path.join(os.homedir(), '.claude')];
 }
 
