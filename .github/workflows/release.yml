@@ -49,7 +49,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
-      # Uploads the installers plus latest*.yml (what the updater reads) into the draft.
+      # Uploads the installers (.deb, setup .exe, macOS .zip) plus latest*.yml (what the updater reads) into the draft.
       - run: npx electron-builder ${{ matrix.target }} --publish always
         env:
           GH_TOKEN: ${{ github.token }}
@@ -79,7 +79,7 @@ jobs:
           assets=$(gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[].name')
           echo "$assets"
           missing=0
-          for pattern in '^latest\.yml$' '^latest-linux\.yml$' '^latest-mac\.yml$' '\.deb$' 'setup-x64\.exe$' 'arm64\.dmg$' 'x64\.dmg$' 'arm64\.zip$' 'x64\.zip$'; do
+          for pattern in '^latest\.yml$' '^latest-linux\.yml$' '^latest-mac\.yml$' '\.deb$' 'setup-x64\.exe$' 'arm64\.zip$' 'x64\.zip$'; do
             echo "$assets" | grep -Eq "$pattern" || { echo "missing: $pattern"; missing=1; }
           done
           exit $missing
@@ -88,7 +88,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --draft=false --latest
 
-  # Points the Homebrew cask (mugeshk97/homebrew-tap) at the new .dmg files. Needs the
+  # Points the Homebrew cask (mugeshk97/homebrew-tap) at the new macOS .zip files. Needs the
   # HOMEBREW_TAP_TOKEN secret (a fine-grained token with Contents: write on that repo); skipped
   # without it. The tap's own workflow then test-installs the cask on a Mac.
   homebrew:
@@ -113,11 +113,11 @@ jobs:
           version=${GITHUB_REF_NAME#v}
           digest() {
             gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" \
-              -q ".assets[] | select(.name == \"tokenmeter-$version-$1.dmg\") | .digest" | sed 's/^sha256://'
+              -q ".assets[] | select(.name == \"tokenmeter-$version-$1.zip\") | .digest" | sed 's/^sha256://'
           }
           arm=$(digest arm64)
           intel=$(digest x64)
-          [ ${#arm} = 64 ] && [ ${#intel} = 64 ] || { echo "missing dmg checksums"; exit 1; }
+          [ ${#arm} = 64 ] && [ ${#intel} = 64 ] || { echo "missing zip checksums"; exit 1; }
           sed -i -E \
             -e "s/^  version \".*\"/  version \"$version\"/" \
             -e "s/^  sha256 arm:   \"[0-9a-f]{64}\"/  sha256 arm:   \"$arm\"/" \
