@@ -78,7 +78,7 @@ test('anthropic: sums hourly tokens, converts cost cents, follows pagination', a
   assert.equal(card.foot, '$16.00 spent this month');
   const stat = Object.fromEntries(card.stats.map((s) => [s.label, s.value]));
   assert.equal(stat['Month to date'], '$16.00');
-  assert.equal(stat['Today (UTC)'], '$3.50');
+  assert.equal(stat['Cost today (UTC)'], '$3.50');
   assert.equal(stat['Tokens 24h'], '1.8K'); // 1200 + 550
   assert.equal(stat['Cache hits'], '20%'); // 300 / (1100+300+100)
   assert.deepEqual(card.spark.points, [1200, 550]);
@@ -127,7 +127,7 @@ test('xai: month-to-date from usage series, limit meter from invoice, tolerates 
   assert.equal(card.headline.label, 'left of $200 limit');
   const stat = Object.fromEntries(card.stats.map((s) => [s.label, s.value]));
   assert.equal(stat['Month to date'], '$1.89');
-  assert.equal(stat.Today, '$0.25');
+  assert.equal(stat['Cost today'], '$0.25');
   assert.equal(stat['Top model'], 'grok-4-0709');
   assert.equal(stat['Postpaid bill'], '$1.89');
   assert.equal(card.meters[0].label, 'Spending limit $200.00');
@@ -174,7 +174,7 @@ test('openai: costs in dollars, tokens per hour', async () => {
   const card = await fetchOpenAI({ adminKey: 'sk-admin-x' }, { fetchImpl, now });
   assert.equal(card.headline.value, '$3.25');
   const stat = Object.fromEntries(card.stats.map((s) => [s.label, s.value]));
-  assert.equal(stat['Today (UTC)'], '$0.75');
+  assert.equal(stat['Cost today (UTC)'], '$0.75');
   assert.equal(stat['Tokens 24h'], '1.5K');
   assert.equal(stat['Requests 24h'], '3');
 });

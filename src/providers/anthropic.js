@@ -81,7 +81,7 @@ async function fetchAnthropic({ adminKey, budget = 0 }, { fetchImpl, now = new D
     meters,
     stats: [
       { label: 'Month to date', value: fmtUSD(mtd) },
-      { label: 'Today (UTC)', value: fmtUSD(today) },
+      { label: 'Cost today (UTC)', value: fmtUSD(today) },
       { label: 'Tokens 24h', value: fmtTokens(tok.total) },
       { label: 'In / Out 24h', value: `${fmtTokens(promptSide)} / ${fmtTokens(tok.output)}` },
       { label: 'Cache hits', value: cacheHit === null ? '-' : `${cacheHit}%` },

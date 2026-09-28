@@ -203,7 +203,7 @@ function renderCard(c) {
         'div',
         { class: 'setup' },
         el('span', { text: 'Not set up yet.' }),
-        el('button', { class: 'link-btn', text: d === 'compact' ? 'Set up' : 'Add key', 'aria-label': `Add key for ${c.name}`, onclick: () => openSettings(c.id) })
+        el('button', { class: 'link-btn', text: 'Set up', 'aria-label': `Set up ${c.name}`, onclick: () => openSettings(c.id) })
       )
     );
     return card;
@@ -314,8 +314,7 @@ function render() {
     if (again) again.focus();
   }
 
-  const newest = Math.max(0, ...cards.map((c) => c.updatedAt || 0));
-  $('#updated').textContent = newest ? `updated ${ago(newest) === 'now' ? 'just now' : `${ago(newest)} ago`} · every ${state.meta.pollMinutes || 5}m` : 'waiting for data…';
+  tickRing();
   $('#btn-pin').setAttribute('aria-pressed', String(Boolean(state.meta.alwaysOnTop)));
   const hiddenCount = hiddenTools().length;
   if (!hiddenCount) pickerOpen = false;
@@ -426,6 +425,36 @@ cardsRoot.addEventListener('keydown', (e) => {
   });
 });
 
+// ---------- refresh countdown ring (header) ----------
+function inWords(ms) {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return s < 60 ? `${s}s` : `${Math.round(s / 60)}m`;
+}
+
+/** Fill the ring by how far we are toward the next scheduled API refresh; the words go in its tooltip. */
+function tickRing() {
+  const cards = state.cards || [];
+  const newest = Math.max(0, ...cards.map((c) => c.updatedAt || 0));
+  const { lastAt, everyMs } = state.meta.schedule || {};
+  let pct = 0;
+  let text = 'Waiting for data';
+  if (newest) {
+    const updated = ago(newest) === 'now' ? 'Updated just now' : `Updated ${ago(newest)} ago`;
+    if (lastAt && everyMs) {
+      const into = (Date.now() - lastAt) % everyMs;
+      pct = (into / everyMs) * 100;
+      text = `${updated} · next refresh in ${inWords(everyMs - into)} (every ${Math.round(everyMs / 60000)}m)`;
+    } else {
+      text = updated;
+    }
+  }
+  $('#refresh-ring-fill').style.strokeDashoffset = String(100 - pct);
+  $('#refresh-ring-title').textContent = text;
+  $('#refresh-ring').setAttribute('aria-label', text);
+}
+
+setInterval(tickRing, 1000);
+
 // ---------- window fits its content ----------
 let fitTimer = 0;
 
@@ -469,11 +498,11 @@ async function setDensity(d) {
 const PROVIDER_FIELDS = {
   claudeCode: {
     help: 'Reads token usage from Claude Code transcripts on this computer. No key needed.',
-    fields: [{ name: 'dir', label: 'Claude config folder (optional)', placeholder: '~/.claude (auto-detected)' }],
+    fields: [{ name: 'dir', label: 'Claude Code folder (optional)', placeholder: '~/.claude (auto-detected)' }],
   },
   codex: {
     help: 'Reads the 5-hour and weekly limit snapshots Codex saves locally. No key needed.',
-    fields: [{ name: 'home', label: 'CODEX_HOME (optional)', placeholder: '~/.codex (auto-detected)' }],
+    fields: [{ name: 'home', label: 'Codex folder (optional)', placeholder: '~/.codex (auto-detected)' }],
   },
   grokCli: {
     help: 'Reads per-turn tokens and cost that Grok CLI logs on this computer. No key needed.',
@@ -489,7 +518,7 @@ const PROVIDER_FIELDS = {
     fields: [{ name: 'home', label: 'Gemini folder (optional)', placeholder: '~/.gemini (auto-detected)' }],
   },
   anthropic: {
-    help: 'Admin API key from Console → Settings → Admin Keys (org accounts only).',
+    help: 'Admin API key from Claude Console (platform.claude.com) → Settings → Admin Keys (org accounts only).',
     secret: { name: 'anthropicAdminKey', placeholder: 'sk-ant-admin01-…' },
     fields: [{ name: 'budget', label: 'Monthly budget, USD (0 = none)', type: 'number' }],
   },
@@ -502,7 +531,7 @@ const PROVIDER_FIELDS = {
     ],
   },
   openai: {
-    help: 'Org Admin key from platform.openai.com → Settings → Admin keys. Covers Codex on an API key.',
+    help: 'Org Admin key from platform.openai.com → Settings → Admin keys. Includes Codex usage billed to an API key.',
     secret: { name: 'openaiAdminKey', placeholder: 'sk-admin-…' },
     fields: [{ name: 'budget', label: 'Monthly budget, USD (0 = none)', type: 'number' }],
   },

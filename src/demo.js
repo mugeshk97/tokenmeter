@@ -10,7 +10,7 @@ function demoCards() {
   return [
     {
       id: 'claudeCode', name: 'Claude Code', accent: '#e8a87c', kind: 'local', status: 'ok', updatedAt: now - 20e3,
-      headline: { value: '2h 6m', label: 'left in 5-hour session', short: 'left · 5h session' },
+      headline: { value: '2h 6m', label: 'left in 5-hour session', short: 'left in session' },
       foot: '3.4M tokens this session',
       meters: [{ label: '5-hour session window', pct: 58, detail: 'resets in 2h 6m' }],
       stats: [
@@ -21,7 +21,7 @@ function demoCards() {
     },
     {
       id: 'codex', name: 'Codex', accent: '#b28cff', kind: 'local', status: 'ok', updatedAt: now - 40e3,
-      headline: { value: '29%', label: 'left this week', short: 'left · weekly limit' },
+      headline: { value: '29%', label: 'left this week', short: 'left this week' },
       foot: 'resets in 2d 4h',
       meters: [
         { label: '5-hour limit', pct: 34, detail: '66% left · 3h 12m' },
@@ -65,7 +65,7 @@ function demoCards() {
       foot: '$42.18 spent this month',
       meters: [{ label: 'Monthly budget $100.00', pct: 42, detail: '58% left' }],
       stats: [
-        { label: 'Month to date', value: '$42.18' }, { label: 'Today (UTC)', value: '$3.07' }, { label: 'Tokens 24h', value: '6.1M' },
+        { label: 'Month to date', value: '$42.18' }, { label: 'Cost today (UTC)', value: '$3.07' }, { label: 'Tokens 24h', value: '6.1M' },
         { label: 'In / Out 24h', value: '5.7M / 412K' }, { label: 'Cache hits', value: '63%' },
       ],
       spark: { label: 'tokens / hour, last 24h', points: wave(24, 250000, 200000, 3) },
@@ -77,7 +77,7 @@ function demoCards() {
       foot: '$7.90 billed this month',
       meters: [{ label: 'Spending limit $200.00', pct: 4, detail: '$7.90 used' }],
       stats: [
-        { label: 'Month to date', value: '$7.90' }, { label: 'Today', value: '$0.44' }, { label: 'Top model', value: 'grok-4-fast' },
+        { label: 'Month to date', value: '$7.90' }, { label: 'Cost today', value: '$0.44' }, { label: 'Top model', value: 'grok-4-fast' },
         { label: 'Postpaid bill', value: '$7.90' }, { label: 'Prepaid credit', value: '$25.00' },
       ],
       spark: { label: 'USD / day, this month', points: wave(28, 30, 25, 5) },

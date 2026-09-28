@@ -158,7 +158,8 @@ button {
 
 .brand-text {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-6);
   line-height: 1.15;
   min-width: 0;
 }
@@ -169,11 +170,29 @@ button {
   font-weight: 600;
 }
 
-.brand-text .muted {
-  font-size: var(--text-xs);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+/* Countdown to the next API refresh */
+.ring {
+  -webkit-app-region: no-drag; /* the header is a drag handle, which would swallow the tooltip */
+  width: 12px;
+  height: 12px;
+  flex: none;
+  transform: rotate(-90deg);
+}
+
+.ring circle {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.ring-track {
+  stroke: var(--track);
+}
+
+.ring-fill {
+  stroke: var(--brand);
+  stroke-dasharray: 100;
+  stroke-dashoffset: 100;
+  stroke-linecap: round;
 }
 
 .actions {

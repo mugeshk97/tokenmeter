@@ -75,7 +75,7 @@ async function fetchXai({ managementKey, teamId, budget = 0 }, { fetchImpl, now 
     mtd = days.reduce((acc, k) => acc + byDay.get(k), 0);
     today = days.length ? byDay.get(days[days.length - 1]) : 0;
     stats.push({ label: 'Month to date', value: fmtUSD(mtd) });
-    stats.push({ label: 'Today', value: fmtUSD(today) });
+    stats.push({ label: 'Cost today', value: fmtUSD(today) });
     stats.push({ label: 'Top model', value: top && top.sum > 0 ? shortModel(top.label) : '-' });
     spark = { label: 'USD / day, this month', points: days.map((k) => byDay.get(k)) };
     if (usageR.value.limitReached) warnings.push('Usage series truncated by xAI');

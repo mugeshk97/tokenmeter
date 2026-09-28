@@ -20,7 +20,12 @@
         </svg>
         <div class="brand-text">
           <h1 class="app-title">Tokenmeter</h1>
-          <span id="updated" class="muted">loading…</span>
+          <!-- Fills toward the next API refresh; the exact times are in its tooltip and label. -->
+          <svg id="refresh-ring" class="ring" viewBox="0 0 16 16" role="img" aria-label="Waiting for data">
+            <title id="refresh-ring-title">Waiting for data</title>
+            <circle class="ring-track" cx="8" cy="8" r="6" />
+            <circle id="refresh-ring-fill" class="ring-fill" cx="8" cy="8" r="6" pathLength="100" />
+          </svg>
         </div>
       </div>
       <div class="actions">

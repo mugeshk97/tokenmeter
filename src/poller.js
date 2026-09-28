@@ -20,6 +20,13 @@ class Poller {
     this.cards = {};
     this.inFlight = new Set();
     this.timers = [];
+    this.remoteMs = 0;
+    this.remoteAt = 0; // when the scheduled API refresh last ran (drives the header's countdown ring)
+  }
+
+  /** When the scheduled API refresh last ran and how often it runs. */
+  schedule() {
+    return { lastAt: this.remoteAt, everyMs: this.remoteMs };
   }
 
   secretsFor(p) {
@@ -94,9 +101,16 @@ class Poller {
     this.stop();
     const cfg = this.getConfig();
     const remoteMs = Math.max(1, Number(cfg.pollMinutes) || 5) * 60 * 1000;
+    this.remoteMs = remoteMs;
+    this.remoteAt = Date.now();
     this.refresh();
     this.timers.push(setInterval(() => this.refresh('local'), LOCAL_INTERVAL_MS));
-    this.timers.push(setInterval(() => this.refresh('remote'), remoteMs));
+    this.timers.push(
+      setInterval(() => {
+        this.remoteAt = Date.now();
+        this.refresh('remote');
+      }, remoteMs)
+    );
   }
 
   stop() {

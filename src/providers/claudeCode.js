@@ -130,7 +130,7 @@ async function fetchClaudeCode({ dir } = {}, { now = new Date() } = {}) {
       detail: `resets in ${left}`,
     });
     // Lead with the time left in the session; its tokens move to the footnote and stats.
-    headline = { value: left, label: 'left in 5-hour session', short: 'left · 5h session' };
+    headline = { value: left, label: 'left in 5-hour session', short: 'left in session' };
     foot = `${fmtTokens(active.tokens)} tokens this session`;
     stats.push({ label: 'Session tokens', value: fmtTokens(active.tokens) });
   } else {

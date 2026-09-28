@@ -152,8 +152,8 @@ async function fetchCodex({ home } = {}, { now = new Date() } = {}) {
     }
     // Lead with whichever limit is closest to running out.
     if (tight) {
-      const what = tight.label === 'Weekly limit' ? 'this week' : `in ${tight.label.toLowerCase()}`;
-      headline = { value: `${tight.left}%`, label: `left ${what}`, short: `left · ${tight.label.toLowerCase()}` };
+      const what = tight.label === 'Weekly limit' ? 'this week' : `of ${tight.label.toLowerCase()}`;
+      headline = { value: `${tight.left}%`, label: `left ${what}`, short: `left ${what}` };
       foot = tight.resets || null;
     }
   }

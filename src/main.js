@@ -63,6 +63,7 @@ function meta() {
     pollMinutes: store.config.pollMinutes,
     density: store.config.density,
     sortByLimit: store.config.sortByLimit !== false,
+    schedule: poller ? poller.schedule() : null,
     autoFit: store.config.autoFit !== false,
     demo: DEMO,
     // Every provider, including hidden ones, so the widget can offer "Add tool".
@@ -458,7 +459,8 @@ app.whenReady().then(() => {
 
   if (DEMO) {
     const { demoCards } = require('./demo');
-    poller = { refresh() {}, refreshById() {}, reset() {}, stop() {} };
+    const startedAt = Date.now();
+    poller = { refresh() {}, refreshById() {}, reset() {}, stop() {}, schedule: () => ({ lastAt: startedAt, everyMs: store.config.pollMinutes * 60e3 }) };
     lastCards = demoCards();
   } else {
     poller = new Poller({

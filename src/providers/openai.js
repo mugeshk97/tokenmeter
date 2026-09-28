@@ -63,7 +63,7 @@ async function fetchOpenAI({ adminKey, budget = 0 }, { fetchImpl, now = new Date
     meters,
     stats: [
       { label: 'Month to date', value: fmtUSD(mtd) },
-      { label: 'Today (UTC)', value: fmtUSD(today) },
+      { label: 'Cost today (UTC)', value: fmtUSD(today) },
       { label: 'Tokens 24h', value: fmtTokens(input + output) },
       { label: 'In / Out 24h', value: `${fmtTokens(input)} / ${fmtTokens(output)}` },
       { label: 'Requests 24h', value: fmtTokens(requests) },
