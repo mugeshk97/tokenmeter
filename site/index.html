@@ -49,6 +49,7 @@
       { "@type": "Question", "name": "Which AI tools does Tokenmeter support?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code, OpenAI Codex, GitHub Copilot, Gemini CLI and Grok CLI, plus spend and budgets for the Claude (Anthropic), OpenAI and xAI APIs." } },
       { "@type": "Question", "name": "Does Tokenmeter work on Linux?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. On Debian, Ubuntu and derivatives, install it from the signed Tokenmeter apt repository and it updates with your other system updates. It also runs on Windows and macOS." } },
       { "@type": "Question", "name": "Can Tokenmeter show Claude Code limits as a percentage?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Tokenmeter shows the percentage left of your 5-hour and weekly Claude Code limits, with reset times, the same numbers Claude Code's /usage shows. It uses the sign-in Claude Code already saved on your computer." } },
+      { "@type": "Question", "name": "Can Tokenmeter show Codex limits?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Tokenmeter shows the percentage left of your Codex 5-hour and weekly limits, with reset times, live from ChatGPT (the same numbers Codex's /status shows). It uses the ChatGPT sign-in Codex already saved on your computer." } },
       { "@type": "Question", "name": "Is Tokenmeter an official Anthropic, OpenAI or GitHub product?", "acceptedAnswer": { "@type": "Answer", "text": "No. Tokenmeter is an independent open-source project and isn't affiliated with any of the providers it reads." } }
     ]
   }
@@ -98,7 +99,7 @@
       <h2>Supported AI tools</h2>
       <div class="grid tools">
         <div class="tool"><h3>Claude Code</h3><p>5-hour and weekly limits left with reset times, plus daily tokens. No setup.</p></div>
-        <div class="tool"><h3>OpenAI Codex</h3><p>5-hour and weekly limits left, with reset times. No setup.</p></div>
+        <div class="tool"><h3>OpenAI Codex</h3><p>5-hour and weekly limits left with reset times, live from ChatGPT, plus daily tokens. No setup.</p></div>
         <div class="tool"><h3>GitHub Copilot</h3><p>Premium requests left and the reset date. Needs a GitHub token.</p></div>
         <div class="tool"><h3>Gemini CLI</h3><p>Tokens today and over the last 7 days. No setup.</p></div>
         <div class="tool"><h3>Grok CLI</h3><p>Tokens and cost today and this month, as the CLI reports. No setup.</p></div>
@@ -139,6 +140,7 @@ sudo apt update &amp;&amp; sudo apt install tokenmeter</code></pre>
         <li>Your usage data stays on your computer. No analytics, no telemetry.</li>
         <li>API keys are encrypted with your system keychain (macOS Keychain, Windows DPAPI, GNOME Keyring or KWallet).</li>
         <li>Each key is only sent to its own provider's API.</li>
+        <li>Claude Code and Codex limits use the sign-in each tool already saved; it is only sent to Anthropic or OpenAI, never stored by Tokenmeter.</li>
         <li>Open source under the MIT license: <a href="https://github.com/mugeshk97/tokenmeter">read the code</a>.</li>
       </ul>
     </section>
@@ -150,6 +152,7 @@ sudo apt update &amp;&amp; sudo apt install tokenmeter</code></pre>
       <details><summary>Which AI tools does Tokenmeter support?</summary><p>Claude Code, OpenAI Codex, GitHub Copilot, Gemini CLI and Grok CLI, plus spend and budgets for the Claude (Anthropic), OpenAI and xAI APIs.</p></details>
       <details><summary>Does Tokenmeter work on Linux?</summary><p>Yes. On Debian, Ubuntu and derivatives, install it from the signed Tokenmeter apt repository and it updates with your other system updates. It also runs on Windows and macOS.</p></details>
       <details><summary>Can Tokenmeter show Claude Code limits as a percentage?</summary><p>Yes. Tokenmeter shows the percentage left of your 5-hour and weekly Claude Code limits, with reset times, the same numbers Claude Code's /usage shows. It uses the sign-in Claude Code already saved on your computer.</p></details>
+      <details><summary>Can Tokenmeter show Codex limits?</summary><p>Yes. Tokenmeter shows the percentage left of your Codex 5-hour and weekly limits, with reset times, live from ChatGPT (the same numbers Codex's /status shows). It uses the ChatGPT sign-in Codex already saved on your computer.</p></details>
       <details><summary>Is Tokenmeter an official Anthropic, OpenAI or GitHub product?</summary><p>No. Tokenmeter is an independent open-source project and isn't affiliated with any of the providers it reads.</p></details>
     </section>
   </main>
