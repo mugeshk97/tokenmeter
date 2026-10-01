@@ -42,7 +42,7 @@ AI coding tools meter you in different ways: 5-hour windows, weekly limits, prem
 | Tool | Where the numbers come from | Setup | Shows |
 |---|---|---|---|
 | **Claude Code** | Your plan's limits from Anthropic (using Claude Code's sign-in), plus local transcripts in `~/.claude/projects` | None | 5-hour and weekly limits left with reset times, tokens today, top model, plan, hourly chart |
-| **Codex** | Local session logs in `~/.codex/sessions` | None | 5-hour and weekly limits left with reset times, tokens today, plan |
+| **Codex** | Your plan's limits from ChatGPT (using Codex's sign-in), plus local session logs in `~/.codex/sessions` | None | 5-hour and weekly limits left with reset times, tokens today, plan |
 | **Gemini CLI** | Saved chats in `~/.gemini/tmp` | None | Tokens today and last 7 days, top model, hourly chart |
 | **Grok CLI** | Local session logs in `~/.grok/sessions` | None | Tokens today, cost today and this month (as the CLI reports it), cache hits |
 | **GitHub Copilot** | GitHub's Copilot quota endpoint | A GitHub token (`gh auth token`) | Premium requests left with reset date; chat and completions quota |
@@ -128,7 +128,7 @@ Turn off **Install updates automatically** in Settings to always just be told.
 
 ## Privacy and security
 
-- **Your usage data stays on your computer.** Local cards only read files your tools already write. The Claude Code card also asks Anthropic for your plan limits with the sign-in Claude Code already saved; that token is only sent to Anthropic and never shown or stored by Tokenmeter. Nothing is sent to Tokenmeter or any third party; there is no analytics or telemetry.
+- **Your usage data stays on your computer.** Local cards only read files your tools already write. The Claude Code and Codex cards also ask Anthropic and OpenAI for your plan limits with the sign-in each tool already saved; that token is only sent to its own provider and never shown or stored by Tokenmeter. Nothing is sent to Tokenmeter or any third party; there is no analytics or telemetry.
 - **Keys are encrypted** with your operating system's keychain (macOS Keychain, Windows DPAPI, or GNOME Keyring / KWallet on Linux) and stored in Tokenmeter's settings folder, readable only by you. If Linux has no keyring running, Settings warns you that keys are stored without encryption.
 - **Keys go only to their own provider** (for example, your Anthropic key only to `api.anthropic.com`), never to the widget's page.
 - **The widget page is locked down:** no Node.js access and a strict Content Security Policy with no remote content.
@@ -139,7 +139,7 @@ Found a security problem? Please report it privately through [GitHub security ad
 ## What the numbers mean
 
 - **Claude Code:** limits come from the same (undocumented) endpoint Claude Code's `/usage` uses, refreshed every few minutes. If Claude Code isn't signed in, or its sign-in has expired, the card shows only today's tokens until you open Claude Code again.
-- **Codex:** shows the rate-limit snapshot Codex saves after each turn, so it updates when you use Codex. Usage from ChatGPT on the web appears after a local session records it.
+- **Codex:** limits come live from ChatGPT (the endpoint Codex's `/status` uses), refreshed every few minutes. If Codex is signed in with an API key, or its sign-in has expired, the card falls back to the last snapshot Codex saved locally.
 - **GitHub Copilot:** uses the same undocumented endpoint as the Copilot editor extensions, which GitHub could change without notice.
 - **Gemini CLI:** Gemini API keys have no usage endpoint, so only usage through the CLI is counted.
 - **Grok CLI:** the cost is what the CLI reports (the API-equivalent price), not your grok.com subscription bill. Key-based spend is on the xAI API card.

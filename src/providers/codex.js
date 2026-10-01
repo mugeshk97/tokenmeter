@@ -1,9 +1,10 @@
 'use strict';
 
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { JsonlCache, listJsonl, exists } = require('./localfiles');
-const { num, fmtTokens, fmtDuration, fmtAgo, clampPct, startOfLocalDay, DAY, expandHome } = require('./util');
+const { httpJson, cachedJson, num, fmtTokens, fmtDuration, fmtAgo, clampPct, startOfLocalDay, DAY, expandHome } = require('./util');
 
 function codexHome(override) {
   if (override) return expandHome(override);
@@ -72,19 +73,52 @@ function windowLabel(minutes, fallback) {
 
 const cache = new JsonlCache({ needle: 'token_count', extract: extractTokenCount });
 
+const USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
+const USAGE_TTL = 3 * 60 * 1000;
+const SIGN_IN_NOTE = 'Open Codex to refresh its sign-in to show live limits.';
+
+/** Codex's ChatGPT sign-in from auth.json. Read only: Codex refreshes it itself. */
+function readCodexAuth(home) {
+  let d;
+  try {
+    d = JSON.parse(fs.readFileSync(path.join(home, 'auth.json'), 'utf8'));
+  } catch {
+    return null;
+  }
+  const t = d && d.tokens;
+  if (!t || !t.access_token || (d.auth_mode && d.auth_mode !== 'chatgpt')) return null;
+  let expMs = null;
+  try {
+    const exp = JSON.parse(Buffer.from(t.access_token.split('.')[1], 'base64url').toString()).exp;
+    if (Number.isFinite(exp)) expMs = exp * 1000;
+  } catch {}
+  return { token: t.access_token, accountId: t.account_id || null, expMs };
+}
+
+/** The live usage response, mapped onto the rate_limits shape Codex writes into its logs. */
+function usageToRl(u) {
+  const win = (w) =>
+    w && w.used_percent != null
+      ? { used_percent: w.used_percent, window_minutes: w.limit_window_seconds ? num(w.limit_window_seconds) / 60 : null, resets_at: w.reset_at ?? null }
+      : null;
+  const rl = (u && u.rate_limit) || {};
+  return { primary: win(rl.primary_window), secondary: win(rl.secondary_window), plan_type: u && u.plan_type, credits: u && u.credits };
+}
+
 /**
  * Codex on a ChatGPT plan: reads the rate-limit snapshots that the Codex CLI/IDE
  * writes into ~/.codex/sessions/**\/rollout-*.jsonl. Fully local, no network.
  */
-async function fetchCodex({ home } = {}, { now = new Date() } = {}) {
+async function fetchCodex({ home } = {}, { now = new Date(), fetchImpl } = {}) {
   const root = path.join(codexHome(home), 'sessions');
-  if (!exists(root)) throw new Error(`No Codex sessions at ${root.replace(os.homedir(), '~')}`);
+  const auth = readCodexAuth(codexHome(home));
+  if (!auth && !exists(root)) throw new Error(`No Codex sessions at ${root.replace(os.homedir(), '~')}`);
 
   const nowMs = now.getTime();
   const todayStart = startOfLocalDay(now).getTime();
   // Sessions live in sessions/YYYY/MM/DD/. Only walk the last 9 days instead of the whole history.
   const since = nowMs - 8 * DAY;
-  const files = await listJsonl(root, since, 0); // flat layout used by older versions
+  const files = exists(root) ? await listJsonl(root, since, 0) : []; // flat layout used by older versions
   for (let i = 0; i <= 8; i++) {
     const d = new Date(nowMs - i * DAY);
     const dayDir = path.join(root, String(d.getFullYear()), String(d.getMonth() + 1).padStart(2, '0'), String(d.getDate()).padStart(2, '0'));
@@ -115,6 +149,27 @@ async function fetchCodex({ home } = {}, { now = new Date() } = {}) {
       if (r.rl && (!latestRl || ts >= latestRl.ts)) latestRl = { ts, rl: r.rl };
     }
     if (lastToday !== null) tokensToday += Math.max(0, lastToday - base);
+  }
+
+  // Live limits from ChatGPT win over the last local snapshot.
+  let live = false;
+  let apiNote = null;
+  if (auth && auth.expMs && auth.expMs <= nowMs) {
+    apiNote = SIGN_IN_NOTE;
+  } else if (auth) {
+    try {
+      const headers = { authorization: `Bearer ${auth.token}` };
+      if (auth.accountId) headers['chatgpt-account-id'] = auth.accountId;
+      const usage = await cachedJson(`codex:${auth.token}`, USAGE_TTL, nowMs, () => httpJson(USAGE_URL, { headers, fetchImpl }));
+      const rl = usageToRl(usage.data);
+      if (rl.primary || rl.secondary) {
+        latestRl = { ts: usage.at, rl };
+        live = true;
+        if (usage.stale) apiNote = `Limits as of ${fmtAgo(usage.at, nowMs)}; couldn't refresh.`;
+      }
+    } catch (err) {
+      apiNote = err.status === 401 || err.status === 403 ? SIGN_IN_NOTE : `Live limits unavailable: ${err.message}`;
+    }
   }
 
   const meters = [];
@@ -160,7 +215,7 @@ async function fetchCodex({ home } = {}, { now = new Date() } = {}) {
 
   const stats = [
     { label: 'Tokens today', value: fmtTokens(tokensToday) },
-    { label: 'Last activity', value: lastActivity ? fmtAgo(lastActivity, nowMs) : 'none this week' },
+    { label: 'Last activity', value: lastActivity ? fmtAgo(lastActivity, nowMs) : 'none' },
   ];
   if (plan) stats.push({ label: 'Plan', value: String(plan) });
   if (credits) stats.push({ label: 'Credits', value: credits });
@@ -171,10 +226,14 @@ async function fetchCodex({ home } = {}, { now = new Date() } = {}) {
     meters,
     stats,
     spark: null,
-    note: latestRl
-      ? 'Snapshot from your latest Codex session; it updates whenever Codex runs.'
-      : 'No rate-limit data yet. Run Codex once (or use /status) to populate it.',
+    note:
+      apiNote ||
+      (live
+        ? 'Live from ChatGPT.'
+        : latestRl
+          ? 'Snapshot from your latest Codex session; it updates whenever Codex runs.'
+          : 'No rate-limit data yet. Run Codex once (or use /status) to populate it.'),
   };
 }
 
-module.exports = { fetchCodex, extractTokenCount, normWindow, windowLabel };
+module.exports = { fetchCodex, extractTokenCount, normWindow, windowLabel, readCodexAuth, usageToRl };

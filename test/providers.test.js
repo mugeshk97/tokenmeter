@@ -237,6 +237,93 @@ test('codex: flat legacy format and expired window', async () => {
   assert.equal(card.meters[1].pct, 10);
 });
 
+function codexAuth(home, { exp = Date.now() / 1000 + 3600, mode = 'chatgpt' } = {}) {
+  const jwt = ['x', Buffer.from(JSON.stringify({ exp })).toString('base64url'), 'sig'].join('.');
+  fs.writeFileSync(path.join(home, 'auth.json'), JSON.stringify({ auth_mode: mode, tokens: { access_token: jwt, account_id: 'acct-1' } }));
+  return jwt;
+}
+
+function codexSnapshot(home, now, rate_limits) {
+  fs.mkdirSync(path.join(home, 'sessions'), { recursive: true });
+  const line = { timestamp: new Date(now.getTime() - 3600e3).toISOString(), type: 'event_msg', payload: { type: 'token_count', info: null, rate_limits } };
+  fs.writeFileSync(path.join(home, 'sessions', 'rollout-snap.jsonl'), JSON.stringify(line) + '\n');
+}
+
+function whamUsage(now, { primary, secondary = null, plan = 'free' } = {}) {
+  const at = (s) => Math.floor(now.getTime() / 1000) + s;
+  return {
+    plan_type: plan,
+    rate_limit: {
+      allowed: true,
+      primary_window: primary || { used_percent: 0, limit_window_seconds: 2592000, reset_after_seconds: 2592000, reset_at: at(2592000) },
+      secondary_window: secondary,
+    },
+    credits: { has_credits: false, unlimited: false, balance: null },
+  };
+}
+
+test('codex: live limits from ChatGPT win over the local snapshot', async () => {
+  const home = tmpdir();
+  const now = new Date();
+  const jwt = codexAuth(home);
+  codexSnapshot(home, now, { primary: { used_percent: 90, window_minutes: 300, resets_in_seconds: 9000 } });
+  const log = [];
+  const body = whamUsage(now, {
+    plan: 'plus',
+    primary: { used_percent: 20, limit_window_seconds: 18000, reset_at: Math.floor(now.getTime() / 1000) + 7200 },
+    secondary: { used_percent: 55, limit_window_seconds: 604800, reset_at: Math.floor(now.getTime() / 1000) + 3 * 86400 },
+  });
+  const card = await fetchCodex({ home }, { now, fetchImpl: mockFetch([[/wham\/usage/, body]], log) });
+
+  assert.equal(log.length, 1);
+  assert.equal(log[0].init.headers.authorization, `Bearer ${jwt}`);
+  assert.equal(log[0].init.headers['chatgpt-account-id'], 'acct-1');
+  assert.deepEqual(card.meters.map((m) => [m.label, m.pct]), [['5-hour limit', 20], ['Weekly limit', 55]]);
+  assert.deepEqual(card.headline, { value: '45%', label: 'left this week', short: 'left this week' });
+  assert.equal(card.note, 'Live from ChatGPT.');
+  assert.equal(Object.fromEntries(card.stats.map((s) => [s.label, s.value])).Plan, 'plus');
+});
+
+test('codex: free plan 30-day window, signed in with no sessions yet', async () => {
+  const home = tmpdir();
+  const now = new Date();
+  codexAuth(home);
+  const card = await fetchCodex({ home }, { now, fetchImpl: mockFetch([[/wham/, whamUsage(now)]]) });
+  assert.equal(card.meters[0].label, '30-day limit');
+  assert.equal(card.meters[0].detail, '100% left · 30d');
+  assert.deepEqual(card.headline, { value: '100%', label: 'left of 30-day limit', short: 'left of 30-day limit' });
+  assert.equal(Object.fromEntries(card.stats.map((s) => [s.label, s.value])).Plan, 'free');
+});
+
+test('codex: 401 or expired sign-in falls back to the snapshot; API keys are ignored', async () => {
+  const now = new Date();
+  const snap = { primary: { used_percent: 40, window_minutes: 300, resets_in_seconds: 9000 } };
+  const log = [];
+  const ok = mockFetch([[/wham/, whamUsage(now)]], log);
+
+  const expiredHome = tmpdir();
+  codexAuth(expiredHome, { exp: now.getTime() / 1000 - 60 });
+  codexSnapshot(expiredHome, now, snap);
+  const expired = await fetchCodex({ home: expiredHome }, { now, fetchImpl: ok });
+
+  const keyHome = tmpdir();
+  codexAuth(keyHome, { mode: 'apikey' });
+  codexSnapshot(keyHome, now, snap);
+  const apiKey = await fetchCodex({ home: keyHome }, { now, fetchImpl: ok });
+  assert.equal(log.length, 0);
+  assert.match(apiKey.note, /^Snapshot from your latest Codex session/);
+
+  const deniedHome = tmpdir();
+  codexAuth(deniedHome);
+  codexSnapshot(deniedHome, now, snap);
+  const denied = await fetchCodex({ home: deniedHome }, { now, fetchImpl: mockFetch([[/wham/, { status: 401, body: { detail: 'expired' } }]]) });
+
+  for (const card of [expired, denied]) {
+    assert.equal(card.meters[0].pct, 40);
+    assert.match(card.note, /Open Codex to refresh its sign-in/);
+  }
+});
+
 test('codex: missing folder gives a clear error', async () => {
   await assert.rejects(fetchCodex({ home: path.join(tmpdir(), 'nope') }), /No Codex sessions/);
 });

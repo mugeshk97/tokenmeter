@@ -682,7 +682,7 @@ const PROVIDER_FIELDS = {
     fields: [{ name: 'dir', label: 'Claude Code folder (optional)', placeholder: '~/.claude (auto-detected)' }],
   },
   codex: {
-    help: 'Reads the 5-hour and weekly limit snapshots Codex saves locally. No key needed.',
+    help: "Shows your plan's limits using Codex's sign-in (sent only to OpenAI), or the snapshots Codex saves locally. No key needed.",
     fields: [{ name: 'home', label: 'Codex folder (optional)', placeholder: '~/.codex (auto-detected)' }],
   },
   grokCli: {

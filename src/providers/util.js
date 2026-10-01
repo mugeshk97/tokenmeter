@@ -157,6 +157,25 @@ function budgetMeter(spent, budget) {
   return { label: `Monthly budget ${fmtUSD(budget)}`, pct, detail: `${Math.round(100 - pct)}% left` };
 }
 
+const jsonCache = new Map(); // key -> { at, data }
+
+/**
+ * Cached `load()` for endpoints polled more often than they should be. Serves the last good
+ * copy (marked stale) on errors, except 401/403, which mean the sign-in itself is bad.
+ */
+async function cachedJson(key, ttlMs, nowMs, load) {
+  const hit = jsonCache.get(key);
+  if (hit && nowMs - hit.at < ttlMs) return { data: hit.data, at: hit.at };
+  try {
+    const data = await load();
+    jsonCache.set(key, { at: nowMs, data });
+    return { data, at: nowMs };
+  } catch (err) {
+    if (err.status === 401 || err.status === 403 || !hit) throw err;
+    return { data: hit.data, at: hit.at, stale: true };
+  }
+}
+
 /** Expand a leading ~ in a user-entered folder, with / or \\ after it (Windows). */
 function expandHome(p) {
   return String(p).trim().replace(/^~(?=$|[\\/])/, os.homedir());
@@ -173,6 +192,7 @@ module.exports = {
   DAY,
   HttpError,
   httpJson,
+  cachedJson,
   qs,
   isoNoMs,
   floorHour,

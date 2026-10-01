@@ -5,7 +5,7 @@ const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
 const { JsonlCache, listJsonl, exists } = require('./localfiles');
-const { httpJson, num, fmtTokens, fmtDuration, fmtAgo, clampPct, startOfLocalDay, expandHome, HOUR } = require('./util');
+const { httpJson, cachedJson, num, fmtTokens, fmtDuration, fmtAgo, clampPct, startOfLocalDay, expandHome, HOUR } = require('./util');
 
 const USAGE_URL = 'https://api.anthropic.com/api/oauth/usage';
 const USAGE_TTL = 3 * 60 * 1000; // the card re-reads every minute; the API is rate limited
@@ -75,23 +75,11 @@ async function readOauth(dirs, useKeychain) {
   return null;
 }
 
-const usageCache = new Map(); // token -> { at, data }
-
-/** Plan limits, as Claude Code's /usage shows them. Cached; serves the last good copy on errors. */
-async function fetchPlanUsage(token, fetchImpl, nowMs) {
-  const hit = usageCache.get(token);
-  if (hit && nowMs - hit.at < USAGE_TTL) return { data: hit.data, at: hit.at };
-  try {
-    const data = await httpJson(USAGE_URL, {
-      headers: { authorization: `Bearer ${token}`, 'anthropic-beta': 'oauth-2025-04-20' },
-      fetchImpl,
-    });
-    usageCache.set(token, { at: nowMs, data });
-    return { data, at: nowMs };
-  } catch (err) {
-    if (err.status === 401 || err.status === 403 || !hit) throw err;
-    return { data: hit.data, at: hit.at, stale: true };
-  }
+/** Plan limits, as Claude Code's /usage shows them. */
+function fetchPlanUsage(token, fetchImpl, nowMs) {
+  return cachedJson(`claude:${token}`, USAGE_TTL, nowMs, () =>
+    httpJson(USAGE_URL, { headers: { authorization: `Bearer ${token}`, 'anthropic-beta': 'oauth-2025-04-20' }, fetchImpl })
+  );
 }
 
 const LIMITS = [
