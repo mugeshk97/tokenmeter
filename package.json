@@ -1,7 +1,7 @@
 {
   "name": "tokenmeter",
   "productName": "Tokenmeter",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Always-on desktop meter for Claude, Codex, Grok, Copilot and Gemini usage on Linux, Windows and macOS",
   "main": "src/main.js",
   "author": "Mugesh Kannan K S",
