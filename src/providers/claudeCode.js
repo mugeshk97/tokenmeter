@@ -1,11 +1,14 @@
 'use strict';
 
+const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { execFile } = require('child_process');
 const { JsonlCache, listJsonl, exists } = require('./localfiles');
-const { num, fmtTokens, fmtDuration, fmtAgo, floorHour, startOfLocalDay, expandHome, HOUR, DAY } = require('./util');
+const { httpJson, num, fmtTokens, fmtDuration, fmtAgo, clampPct, startOfLocalDay, expandHome, HOUR } = require('./util');
 
-const BLOCK_MS = 5 * HOUR;
+const USAGE_URL = 'https://api.anthropic.com/api/oauth/usage';
+const USAGE_TTL = 3 * 60 * 1000; // the card re-reads every minute; the API is rate limited
 
 function claudeDirs(override) {
   if (override) return override.split(',').map(expandHome).filter(Boolean);
@@ -35,24 +38,6 @@ function extractAssistantUsage(obj) {
   };
 }
 
-/** Group entries into 5-hour session blocks (same rule Claude Code's limits use). */
-function buildBlocks(entries) {
-  const blocks = [];
-  let cur = null;
-  let lastTs = 0;
-  for (const e of entries) {
-    if (!cur || e.ts >= cur.start + BLOCK_MS || e.ts - lastTs >= BLOCK_MS) {
-      cur = { start: floorHour(e.ts), end: floorHour(e.ts) + BLOCK_MS, tokens: 0, output: 0, first: e.ts, last: e.ts };
-      blocks.push(cur);
-    }
-    cur.tokens += e.total;
-    cur.output += e.output;
-    cur.last = e.ts;
-    lastTs = e.ts;
-  }
-  return blocks;
-}
-
 function shortModel(m) {
   return String(m)
     .replace(/^claude-/, '')
@@ -61,24 +46,94 @@ function shortModel(m) {
 
 const cache = new JsonlCache({ needle: '"usage"', extract: extractAssistantUsage });
 
-/**
- * Claude Code on a Pro/Max plan: token totals from local transcripts
- * (~/.claude/projects/**\/*.jsonl). Fully local, no network.
- */
-async function fetchClaudeCode({ dir } = {}, { now = new Date() } = {}) {
-  const roots = claudeDirs(dir)
-    .map((d) => path.join(d, 'projects'))
-    .filter(exists);
-  if (!roots.length) throw new Error('No Claude Code projects folder found (~/.claude/projects)');
+function keychainCredentials() {
+  return new Promise((resolve) => {
+    execFile('security', ['find-generic-password', '-s', 'Claude Code-credentials', '-w'], { timeout: 5000 }, (err, out) => {
+      resolve(err ? null : String(out).trim());
+    });
+  });
+}
 
+/**
+ * Claude Code's own sign-in (OAuth). It lives in <dir>/.credentials.json, or in the
+ * Keychain on macOS. We only read it: Claude Code refreshes and rotates it.
+ */
+async function readOauth(dirs, useKeychain) {
+  const raws = [];
+  for (const d of dirs) {
+    try {
+      raws.push(fs.readFileSync(path.join(d, '.credentials.json'), 'utf8'));
+    } catch {}
+  }
+  if (!raws.length && useKeychain) raws.push(await keychainCredentials());
+  for (const raw of raws) {
+    try {
+      const o = JSON.parse(raw).claudeAiOauth;
+      if (o && o.accessToken) return { token: o.accessToken, expiresAt: num(o.expiresAt) || null, plan: o.subscriptionType || null };
+    } catch {}
+  }
+  return null;
+}
+
+const usageCache = new Map(); // token -> { at, data }
+
+/** Plan limits, as Claude Code's /usage shows them. Cached; serves the last good copy on errors. */
+async function fetchPlanUsage(token, fetchImpl, nowMs) {
+  const hit = usageCache.get(token);
+  if (hit && nowMs - hit.at < USAGE_TTL) return { data: hit.data, at: hit.at };
+  try {
+    const data = await httpJson(USAGE_URL, {
+      headers: { authorization: `Bearer ${token}`, 'anthropic-beta': 'oauth-2025-04-20' },
+      fetchImpl,
+    });
+    usageCache.set(token, { at: nowMs, data });
+    return { data, at: nowMs };
+  } catch (err) {
+    if (err.status === 401 || err.status === 403 || !hit) throw err;
+    return { data: hit.data, at: hit.at, stale: true };
+  }
+}
+
+const LIMITS = [
+  ['five_hour', '5-hour limit'],
+  ['seven_day', 'Weekly limit'],
+  ['seven_day_opus', 'Weekly Opus limit'],
+  ['seven_day_sonnet', 'Weekly Sonnet limit'],
+];
+
+function planMeters(data, nowMs) {
+  const meters = [];
+  let tight = null;
+  for (const [key, label] of LIMITS) {
+    const w = data && data[key];
+    if (!w || typeof w !== 'object' || w.utilization == null) continue;
+    const resetsAt = Date.parse(w.resets_at || '');
+    const expired = Number.isFinite(resetsAt) && resetsAt <= nowMs;
+    const pct = expired ? 0 : clampPct(w.utilization);
+    const left = Math.round(100 - pct);
+    const inTime = Number.isFinite(resetsAt) && !expired ? fmtDuration(resetsAt - nowMs) : '';
+    const resets = expired ? 'reset since last check' : inTime ? `resets in ${inTime}` : '';
+    meters.push({ label, pct, detail: expired ? resets : [`${left}% left`, inTime].filter(Boolean).join(' · ') });
+    if (!tight || pct > tight.pct) tight = { pct, left, label, resets };
+  }
+  return { meters, tight };
+}
+
+/**
+ * Claude Code on a Pro/Max plan: the real 5-hour and weekly limits from Anthropic's
+ * usage endpoint (using Claude Code's own sign-in, sent only to Anthropic), plus token
+ * totals from local transcripts (~/.claude/projects/**\/*.jsonl).
+ */
+async function fetchClaudeCode({ dir } = {}, { now = new Date(), fetchImpl } = {}) {
+  const dirs = claudeDirs(dir);
+  const roots = dirs.map((d) => path.join(d, 'projects')).filter(exists);
   const nowMs = now.getTime();
   const todayStart = startOfLocalDay(now).getTime();
-  const since = Math.min(todayStart, nowMs - BLOCK_MS * 2) - DAY;
 
   const seen = new Set();
-  const entries = [];
+  const today = [];
   for (const root of roots) {
-    const files = await listJsonl(root, since);
+    const files = await listJsonl(root, todayStart);
     for (const { file, stat } of files) {
       let recs;
       try {
@@ -87,27 +142,22 @@ async function fetchClaudeCode({ dir } = {}, { now = new Date() } = {}) {
         continue;
       }
       for (const r of recs) {
-        if (r.ts < since) continue;
+        if (r.ts < todayStart) continue;
         if (r.key) {
           if (seen.has(r.key)) continue;
           seen.add(r.key);
         }
-        entries.push(r);
+        today.push(r);
       }
     }
   }
-  entries.sort((a, b) => a.ts - b.ts);
+  today.sort((a, b) => a.ts - b.ts);
 
-  const today = entries.filter((e) => e.ts >= todayStart);
   const todayTotal = today.reduce((s, e) => s + e.total, 0);
   const todayOut = today.reduce((s, e) => s + e.output, 0);
   const byModel = new Map();
   for (const e of today) byModel.set(e.model, (byModel.get(e.model) || 0) + e.total);
   const topModel = [...byModel.entries()].sort((a, b) => b[1] - a[1])[0];
-
-  const blocks = buildBlocks(entries);
-  const last = blocks[blocks.length - 1];
-  const active = last && nowMs < last.end && nowMs - last.last < BLOCK_MS ? last : null;
 
   // Hourly sparkline for today
   const hours = Math.max(1, Math.ceil((nowMs - todayStart) / HOUR));
@@ -117,42 +167,51 @@ async function fetchClaudeCode({ dir } = {}, { now = new Date() } = {}) {
     if (i >= 0 && i < spark.length) spark[i] += e.total;
   }
 
-  const meters = [];
-  const stats = [];
-  let headline;
-  let foot;
-  if (active) {
-    const elapsed = nowMs - active.start;
-    const left = fmtDuration(active.end - nowMs);
-    meters.push({
-      label: '5-hour session window',
-      pct: Math.min(100, (elapsed / BLOCK_MS) * 100),
-      detail: `resets in ${left}`,
-    });
-    // Lead with the time left in the session; its tokens move to the footnote and stats.
-    headline = { value: left, label: 'left in 5-hour session', short: 'left in session' };
-    foot = `${fmtTokens(active.tokens)} tokens this session`;
-    stats.push({ label: 'Session tokens', value: fmtTokens(active.tokens) });
+  // Plan limits. A dir override (Settings or tests) never falls back to the Keychain.
+  const auth = await readOauth(dirs, !dir && !process.env.CLAUDE_CONFIG_DIR && process.platform === 'darwin');
+  if (!auth && !roots.length) throw new Error('Claude Code not found: no sign-in or ~/.claude/projects folder');
+
+  let meters = [];
+  let tight = null;
+  let note = null;
+  if (!auth || (auth.expiresAt && auth.expiresAt <= nowMs)) {
+    note = 'Sign in to Claude Code (or open it once) to show plan limits.';
   } else {
-    headline = { value: fmtTokens(todayTotal), label: 'tokens today' };
-    foot = 'no active session';
+    try {
+      const usage = await fetchPlanUsage(auth.token, fetchImpl, nowMs);
+      ({ meters, tight } = planMeters(usage.data, nowMs));
+      if (usage.stale) note = `Limits as of ${fmtAgo(usage.at, nowMs)}; couldn't refresh.`;
+    } catch (err) {
+      note = err.status === 401 || err.status === 403 ? 'Sign in to Claude Code (or open it once) to show plan limits.' : `Plan limits unavailable: ${err.message}`;
+    }
   }
 
-  const lastTs = entries.length ? entries[entries.length - 1].ts : 0;
+  let headline = { value: fmtTokens(todayTotal), label: 'tokens today' };
+  let foot = 'no plan limit data';
+  if (tight) {
+    // Lead with whichever limit is closest to running out.
+    const what = tight.label === '5-hour limit' ? 'of 5-hour limit' : 'this week';
+    headline = { value: `${tight.left}%`, label: `left ${what}`, short: `left ${what}` };
+    foot = tight.resets || `${fmtTokens(todayTotal)} tokens today`;
+  }
+
+  const lastTs = today.length ? today[today.length - 1].ts : 0;
+  const stats = [
+    { label: 'Tokens today', value: fmtTokens(todayTotal) },
+    { label: 'Output today', value: fmtTokens(todayOut) },
+    { label: 'Top model', value: topModel ? shortModel(topModel[0]) : '-' },
+    { label: 'Last activity', value: lastTs ? fmtAgo(lastTs, nowMs) : 'none today' },
+  ];
+  if (auth && auth.plan) stats.push({ label: 'Plan', value: String(auth.plan) });
+
   return {
     headline,
     foot,
     meters,
-    stats: [
-      ...stats,
-      { label: 'Tokens today', value: fmtTokens(todayTotal) },
-      { label: 'Output today', value: fmtTokens(todayOut) },
-      { label: 'Top model', value: topModel ? shortModel(topModel[0]) : '-' },
-      { label: 'Last activity', value: lastTs ? fmtAgo(lastTs, nowMs) : 'none' },
-    ],
+    stats,
     spark: { label: 'tokens / hour, today', points: spark },
-    note: active ? null : 'No active 5-hour session.',
+    note,
   };
 }
 
-module.exports = { fetchClaudeCode, extractAssistantUsage, buildBlocks, claudeDirs };
+module.exports = { fetchClaudeCode, extractAssistantUsage, claudeDirs, planMeters };

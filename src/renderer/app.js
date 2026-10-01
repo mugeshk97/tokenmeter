@@ -678,7 +678,7 @@ async function setDensity(d) {
 // ---------- settings ----------
 const PROVIDER_FIELDS = {
   claudeCode: {
-    help: 'Reads token usage from Claude Code transcripts on this computer. No key needed.',
+    help: "Shows your plan's 5-hour and weekly limits using Claude Code's sign-in (sent only to Anthropic), plus token totals from local transcripts. No key needed.",
     fields: [{ name: 'dir', label: 'Claude Code folder (optional)', placeholder: '~/.claude (auto-detected)' }],
   },
   codex: {

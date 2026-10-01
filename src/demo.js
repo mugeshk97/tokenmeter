@@ -10,12 +10,15 @@ function demoCards() {
   return [
     {
       id: 'claudeCode', name: 'Claude Code', accent: '#e8a87c', kind: 'local', status: 'ok', updatedAt: now - 20e3,
-      headline: { value: '2h 6m', label: 'left in 5-hour session', short: 'left in session' },
-      foot: '3.4M tokens this session',
-      meters: [{ label: '5-hour session window', pct: 58, detail: 'resets in 2h 6m' }],
+      headline: { value: '42%', label: 'left of 5-hour limit', short: 'left of 5-hour limit' },
+      foot: 'resets in 2h 6m',
+      meters: [
+        { label: '5-hour limit', pct: 58, detail: '42% left · 2h 6m' },
+        { label: 'Weekly limit', pct: 37, detail: '63% left · 4d 2h' },
+      ],
       stats: [
-        { label: 'Session tokens', value: '3.4M' }, { label: 'Tokens today', value: '9.8M' }, { label: 'Output today', value: '212K' },
-        { label: 'Top model', value: 'opus-4-7' }, { label: 'Last activity', value: '2m ago' },
+        { label: 'Tokens today', value: '9.8M' }, { label: 'Output today', value: '212K' },
+        { label: 'Top model', value: 'opus-4-7' }, { label: 'Last activity', value: '2m ago' }, { label: 'Plan', value: 'max' },
       ],
       spark: { label: 'tokens / hour, today', points: wave(8, 900000, 700000, 2) },
     },

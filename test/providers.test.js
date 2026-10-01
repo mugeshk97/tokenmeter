@@ -10,7 +10,7 @@ const { fetchAnthropic } = require('../src/providers/anthropic');
 const { fetchXai } = require('../src/providers/xai');
 const { fetchOpenAI } = require('../src/providers/openai');
 const { fetchCodex } = require('../src/providers/codex');
-const { fetchClaudeCode, buildBlocks } = require('../src/providers/claudeCode');
+const { fetchClaudeCode } = require('../src/providers/claudeCode');
 const { fetchCopilot } = require('../src/providers/copilot');
 const { fetchGrokCli } = require('../src/providers/grokCli');
 const { fetchGeminiCli } = require('../src/providers/geminiCli');
@@ -241,11 +241,32 @@ test('codex: missing folder gives a clear error', async () => {
   await assert.rejects(fetchCodex({ home: path.join(tmpdir(), 'nope') }), /No Codex sessions/);
 });
 
-// ---------------------------------------------------------------- Claude Code (local)
-test('claude code: dedupes streamed lines and finds the active 5h block', async () => {
+// ---------------------------------------------------------------- Claude Code (plan limits + local)
+function claudeHome({ token, expiresAt } = {}) {
   const root = tmpdir();
   const proj = path.join(root, 'projects', '-home-me-app');
   fs.mkdirSync(proj, { recursive: true });
+  if (token) {
+    const creds = { claudeAiOauth: { accessToken: token, expiresAt: expiresAt ?? Date.now() + 3600e3, subscriptionType: 'max' } };
+    fs.writeFileSync(path.join(root, '.credentials.json'), JSON.stringify(creds));
+  }
+  return { root, proj };
+}
+
+function usageBody(now, { five = 3, week = 61, fiveReset = 2 * 3600e3 } = {}) {
+  // resets_at in the API's own shape: microseconds and a +00:00 offset
+  const iso = (ms) => new Date(now.getTime() + ms).toISOString().replace('Z', '123+00:00');
+  return {
+    five_hour: { utilization: five, resets_at: iso(fiveReset) },
+    seven_day: { utilization: week, resets_at: iso(2 * 86400e3 + 3600e3) },
+    seven_day_opus: null,
+    seven_day_sonnet: null,
+    limits: [],
+  };
+}
+
+test('claude code: shows plan limits from the usage API, tokens from transcripts', async () => {
+  const { root, proj } = claudeHome({ token: 'tok-plan' });
   const now = new Date();
   const mk = (minsAgo, id, req, out, model = 'claude-opus-4-7-20260601') => ({
     type: 'assistant',
@@ -253,33 +274,68 @@ test('claude code: dedupes streamed lines and finds the active 5h block', async 
     requestId: req,
     message: { id, model, usage: { input_tokens: 10, output_tokens: out, cache_creation_input_tokens: 100, cache_read_input_tokens: 1000 } },
   });
-  const lines = [mk(30, 'msg_1', 'req_1', 50), mk(30, 'msg_1', 'req_1', 50), mk(10, 'msg_2', 'req_2', 200), { type: 'user', message: { content: 'hi' } }];
+  // Keep the messages inside today regardless of when the test runs.
+  const mins = Math.min(30, Math.floor((now - new Date(now).setHours(0, 0, 0, 0)) / 60e3));
+  const lines = [mk(mins, 'msg_1', 'req_1', 50), mk(mins, 'msg_1', 'req_1', 50), mk(0, 'msg_2', 'req_2', 200), { type: 'user', message: { content: 'hi' } }];
   fs.writeFileSync(path.join(proj, 's.jsonl'), lines.map((l) => JSON.stringify(l)).join('\n'));
 
-  const card = await fetchClaudeCode({ dir: root }, { now });
-  // two unique messages: (10+50+100+1000) + (10+200+100+1000)
-  // Headline is the time left in the session (blocks start on the hour, so it varies).
-  assert.match(card.headline.value, /^(\d+h( \d+m)?|\d+m)$/);
-  assert.equal(card.headline.label, 'left in 5-hour session');
-  assert.equal(card.foot, '2.5K tokens this session');
-  assert.equal(card.meters[0].label, '5-hour session window');
+  const log = [];
+  const fetchImpl = mockFetch([[/api\/oauth\/usage/, usageBody(now)]], log);
+  const card = await fetchClaudeCode({ dir: root }, { now, fetchImpl });
+
+  assert.equal(log.length, 1);
+  assert.equal(log[0].init.headers.authorization, 'Bearer tok-plan');
+  assert.equal(log[0].init.headers['anthropic-beta'], 'oauth-2025-04-20');
+  assert.deepEqual(card.meters.map((m) => [m.label, m.pct]), [['5-hour limit', 3], ['Weekly limit', 61]]);
+  assert.equal(card.meters[0].detail, '97% left · 2h');
+  assert.deepEqual(card.headline, { value: '39%', label: 'left this week', short: 'left this week' });
+  assert.equal(card.foot, 'resets in 2d 1h');
+  assert.equal(card.note, null);
   const stat = Object.fromEntries(card.stats.map((s) => [s.label, s.value]));
-  assert.equal(stat['Session tokens'], '2.5K');
+  assert.equal(stat['Tokens today'], '2.5K'); // (10+50+100+1000) + (10+200+100+1000), deduped
   assert.equal(stat['Top model'], 'opus-4-7');
+  assert.equal(stat.Plan, 'max');
+
+  // Cached: a second read within a few minutes does not call the API again.
+  await fetchClaudeCode({ dir: root }, { now: new Date(now.getTime() + 60e3), fetchImpl });
+  assert.equal(log.length, 1);
 });
 
-test('claude code: blocks split on 5h gaps', () => {
-  const H = 3600e3;
-  const base = Date.UTC(2026, 8, 28, 0, 20);
-  const blocks = buildBlocks([
-    { ts: base, total: 1, output: 0 },
-    { ts: base + 2 * H, total: 1, output: 0 },
-    { ts: base + 4.5 * H, total: 1, output: 0 }, // 04:50, still inside block 00:00-05:00
-    { ts: base + 5.2 * H, total: 1, output: 0 }, // past 05:00 -> new block
-  ]);
-  assert.equal(blocks.length, 2);
-  assert.equal(blocks[0].start, Date.UTC(2026, 8, 28, 0, 0));
-  assert.equal(blocks[0].tokens, 3);
+test('claude code: expired limit reads 0%, errors keep the last good copy', async () => {
+  const { root } = claudeHome({ token: 'tok-stale' });
+  const now = new Date();
+  const card = await fetchClaudeCode({ dir: root }, { now, fetchImpl: mockFetch([[/oauth/, usageBody(now, { five: 90, fiveReset: 10 * 60e3 })]]) });
+  assert.equal(card.headline.label, 'left of 5-hour limit');
+
+  const later = new Date(now.getTime() + 20 * 60e3);
+  const failing = mockFetch([[/oauth/, { status: 429, body: { error: { message: 'slow down' } } }]]);
+  const card2 = await fetchClaudeCode({ dir: root }, { now: later, fetchImpl: failing });
+  assert.equal(card2.meters[0].pct, 0);
+  assert.match(card2.meters[0].detail, /reset since last check/);
+  assert.match(card2.note, /Limits as of 20m ago/);
+});
+
+test('claude code: no sign-in, expired token or 401 shows a sign-in note and no meters', async () => {
+  const now = new Date();
+  const log = [];
+  const ok = mockFetch([[/oauth/, usageBody(now)]], log);
+
+  const none = await fetchClaudeCode({ dir: claudeHome().root }, { now, fetchImpl: ok });
+  const expired = await fetchClaudeCode({ dir: claudeHome({ token: 'tok-old', expiresAt: now.getTime() - 1 }).root }, { now, fetchImpl: ok });
+  assert.equal(log.length, 0);
+
+  const denied = mockFetch([[/oauth/, { status: 401, body: { error: { message: 'bad token' } } }]]);
+  const rejected = await fetchClaudeCode({ dir: claudeHome({ token: 'tok-401' }).root }, { now, fetchImpl: denied });
+
+  for (const card of [none, expired, rejected]) {
+    assert.deepEqual(card.meters, []);
+    assert.match(card.note, /Sign in to Claude Code/);
+    assert.equal(card.headline.label, 'tokens today');
+  }
+});
+
+test('claude code: nothing installed gives a clear error', async () => {
+  await assert.rejects(fetchClaudeCode({ dir: path.join(tmpdir(), 'nope') }), /Claude Code not found/);
 });
 
 // ---------------------------------------------------------------- Config store

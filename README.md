@@ -30,7 +30,7 @@
 
 AI coding tools meter you in different ways: 5-hour windows, weekly limits, premium-request quotas, monthly budgets. Each keeps its numbers on its own page. Tokenmeter puts them side by side on your desktop and leads with **what's left**, so you know which tool you can lean on before you hit a wall.
 
-- **What's left, first.** Every card headlines its tightest limit: "2h 6m left in session", "29% left this week", "$57.82 left of $100".
+- **What's left, first.** Every card headlines its tightest limit: "42% left of 5-hour limit", "29% left this week", "$57.82 left of $100".
 - **Closest to running out comes first.** Cards sort by nearest limit (or drag them into your own order).
 - **Red means act.** Once 80% of a limit is used, the number and bar turn red and get a warning icon.
 - **Local-first and private.** Most cards read files your tools already write on your computer. API keys are encrypted with your system keychain and only ever sent to that provider.
@@ -41,7 +41,7 @@ AI coding tools meter you in different ways: 5-hour windows, weekly limits, prem
 
 | Tool | Where the numbers come from | Setup | Shows |
 |---|---|---|---|
-| **Claude Code** | Local transcripts in `~/.claude/projects` | None | Time left in the 5-hour session, session and daily tokens, top model, hourly chart |
+| **Claude Code** | Your plan's limits from Anthropic (using Claude Code's sign-in), plus local transcripts in `~/.claude/projects` | None | 5-hour and weekly limits left with reset times, tokens today, top model, plan, hourly chart |
 | **Codex** | Local session logs in `~/.codex/sessions` | None | 5-hour and weekly limits left with reset times, tokens today, plan |
 | **Gemini CLI** | Saved chats in `~/.gemini/tmp` | None | Tokens today and last 7 days, top model, hourly chart |
 | **Grok CLI** | Local session logs in `~/.grok/sessions` | None | Tokens today, cost today and this month (as the CLI reports it), cache hits |
@@ -128,7 +128,7 @@ Turn off **Install updates automatically** in Settings to always just be told.
 
 ## Privacy and security
 
-- **Your usage data stays on your computer.** Local cards only read files your tools already write. Nothing is sent to Tokenmeter or any third party; there is no analytics or telemetry.
+- **Your usage data stays on your computer.** Local cards only read files your tools already write. The Claude Code card also asks Anthropic for your plan limits with the sign-in Claude Code already saved; that token is only sent to Anthropic and never shown or stored by Tokenmeter. Nothing is sent to Tokenmeter or any third party; there is no analytics or telemetry.
 - **Keys are encrypted** with your operating system's keychain (macOS Keychain, Windows DPAPI, or GNOME Keyring / KWallet on Linux) and stored in Tokenmeter's settings folder, readable only by you. If Linux has no keyring running, Settings warns you that keys are stored without encryption.
 - **Keys go only to their own provider** (for example, your Anthropic key only to `api.anthropic.com`), never to the widget's page.
 - **The widget page is locked down:** no Node.js access and a strict Content Security Policy with no remote content.
@@ -138,7 +138,7 @@ Found a security problem? Please report it privately through [GitHub security ad
 
 ## What the numbers mean
 
-- **Claude Code:** Anthropic doesn't publish a usage-limit API for Pro and Max plans, so Tokenmeter groups your local transcripts into 5-hour sessions (as the plan limits do) and shows the time left in the current one, not a "% of limit".
+- **Claude Code:** limits come from the same (undocumented) endpoint Claude Code's `/usage` uses, refreshed every few minutes. If Claude Code isn't signed in, or its sign-in has expired, the card shows only today's tokens until you open Claude Code again.
 - **Codex:** shows the rate-limit snapshot Codex saves after each turn, so it updates when you use Codex. Usage from ChatGPT on the web appears after a local session records it.
 - **GitHub Copilot:** uses the same undocumented endpoint as the Copilot editor extensions, which GitHub could change without notice.
 - **Gemini CLI:** Gemini API keys have no usage endpoint, so only usage through the CLI is counted.

@@ -45,10 +45,10 @@
     "@type": "FAQPage",
     "mainEntity": [
       { "@type": "Question", "name": "Is Tokenmeter free?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Tokenmeter is free and open source under the MIT license." } },
-      { "@type": "Question", "name": "Does Tokenmeter send my usage data anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Local cards only read files your AI tools already write on your computer, there is no analytics or telemetry, and API keys are only sent to that provider's own API." } },
+      { "@type": "Question", "name": "Does Tokenmeter send my usage data anywhere?", "acceptedAnswer": { "@type": "Answer", "text": "No. Local cards only read files your AI tools already write on your computer, there is no analytics or telemetry, and API keys and sign-ins are only sent to that provider's own API." } },
       { "@type": "Question", "name": "Which AI tools does Tokenmeter support?", "acceptedAnswer": { "@type": "Answer", "text": "Claude Code, OpenAI Codex, GitHub Copilot, Gemini CLI and Grok CLI, plus spend and budgets for the Claude (Anthropic), OpenAI and xAI APIs." } },
       { "@type": "Question", "name": "Does Tokenmeter work on Linux?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. On Debian, Ubuntu and derivatives, install it from the signed Tokenmeter apt repository and it updates with your other system updates. It also runs on Windows and macOS." } },
-      { "@type": "Question", "name": "Can Tokenmeter show Claude Code limits as a percentage?", "acceptedAnswer": { "@type": "Answer", "text": "Anthropic doesn't publish a usage-limit API for Pro and Max plans, so Tokenmeter shows the time left in your current 5-hour session, calculated from your local Claude Code transcripts." } },
+      { "@type": "Question", "name": "Can Tokenmeter show Claude Code limits as a percentage?", "acceptedAnswer": { "@type": "Answer", "text": "Yes. Tokenmeter shows the percentage left of your 5-hour and weekly Claude Code limits, with reset times, the same numbers Claude Code's /usage shows. It uses the sign-in Claude Code already saved on your computer." } },
       { "@type": "Question", "name": "Is Tokenmeter an official Anthropic, OpenAI or GitHub product?", "acceptedAnswer": { "@type": "Answer", "text": "No. Tokenmeter is an independent open-source project and isn't affiliated with any of the providers it reads." } }
     ]
   }
@@ -86,7 +86,7 @@
       <h2>Why Tokenmeter</h2>
       <div class="grid three">
         <div class="point"><h3>Subscriptions and API budgets together</h3><p>Plan limits (5-hour sessions, weekly caps, premium requests) and API spend against your monthly budgets, in one place.</p></div>
-        <div class="point"><h3>What's left, first</h3><p>Every card headlines its tightest limit (“2h 6m left in session”, “$57.82 left of $100”) and turns red once 80% is used.</p></div>
+        <div class="point"><h3>What's left, first</h3><p>Every card headlines its tightest limit (“42% left of 5-hour limit”, “$57.82 left of $100”) and turns red once 80% is used.</p></div>
         <div class="point"><h3>Nearest limit on top</h3><p>Cards sort by how close they are to running out, or drag them into your own order.</p></div>
         <div class="point"><h3>Stays out of the way</h3><p>Pinned, it shows only the cards; hover to bring back the controls.</p></div>
         <div class="point"><h3>Local-first and private</h3><p>Most cards read files your tools already write. No telemetry; keys are encrypted with your system keychain.</p></div>
@@ -97,7 +97,7 @@
     <section id="tools">
       <h2>Supported AI tools</h2>
       <div class="grid tools">
-        <div class="tool"><h3>Claude Code</h3><p>Time left in the 5-hour session, session and daily tokens. No setup.</p></div>
+        <div class="tool"><h3>Claude Code</h3><p>5-hour and weekly limits left with reset times, plus daily tokens. No setup.</p></div>
         <div class="tool"><h3>OpenAI Codex</h3><p>5-hour and weekly limits left, with reset times. No setup.</p></div>
         <div class="tool"><h3>GitHub Copilot</h3><p>Premium requests left and the reset date. Needs a GitHub token.</p></div>
         <div class="tool"><h3>Gemini CLI</h3><p>Tokens today and over the last 7 days. No setup.</p></div>
@@ -146,10 +146,10 @@ sudo apt update &amp;&amp; sudo apt install tokenmeter</code></pre>
     <section id="faq">
       <h2>Frequently asked questions</h2>
       <details><summary>Is Tokenmeter free?</summary><p>Yes. Tokenmeter is free and open source under the MIT license.</p></details>
-      <details><summary>Does Tokenmeter send my usage data anywhere?</summary><p>No. Local cards only read files your AI tools already write on your computer, there is no analytics or telemetry, and API keys are only sent to that provider's own API.</p></details>
+      <details><summary>Does Tokenmeter send my usage data anywhere?</summary><p>No. Local cards only read files your AI tools already write on your computer, there is no analytics or telemetry, and API keys and sign-ins are only sent to that provider's own API.</p></details>
       <details><summary>Which AI tools does Tokenmeter support?</summary><p>Claude Code, OpenAI Codex, GitHub Copilot, Gemini CLI and Grok CLI, plus spend and budgets for the Claude (Anthropic), OpenAI and xAI APIs.</p></details>
       <details><summary>Does Tokenmeter work on Linux?</summary><p>Yes. On Debian, Ubuntu and derivatives, install it from the signed Tokenmeter apt repository and it updates with your other system updates. It also runs on Windows and macOS.</p></details>
-      <details><summary>Can Tokenmeter show Claude Code limits as a percentage?</summary><p>Anthropic doesn't publish a usage-limit API for Pro and Max plans, so Tokenmeter shows the time left in your current 5-hour session, calculated from your local Claude Code transcripts.</p></details>
+      <details><summary>Can Tokenmeter show Claude Code limits as a percentage?</summary><p>Yes. Tokenmeter shows the percentage left of your 5-hour and weekly Claude Code limits, with reset times, the same numbers Claude Code's /usage shows. It uses the sign-in Claude Code already saved on your computer.</p></details>
       <details><summary>Is Tokenmeter an official Anthropic, OpenAI or GitHub product?</summary><p>No. Tokenmeter is an independent open-source project and isn't affiliated with any of the providers it reads.</p></details>
     </section>
   </main>
