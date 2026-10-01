@@ -45,13 +45,15 @@ If `npm start` says Electron failed to install, your npm may have skipped instal
    }
    ```
 
-   Lead with what's **left**. The widget turns a meter red when `pct` reaches 80, and sorts cards by their tightest meter. Throw an `Error` with a friendly message on failure; the card then shows it with a Retry or Fix key button. The helpers in `src/providers/util.js` cover HTTP with timeouts, number formatting and the budget headline.
+   Lead with what's **left**. The widget turns a meter red when `pct` reaches 80, and sorts cards by their tightest meter. Throw an `Error` with a friendly message on failure; the card then shows it with a Retry or Fix key button. The helpers in `src/providers/util.js` cover HTTP with timeouts, number formatting and the budget headline. Local cards are re-read every minute, so wrap any network call in a local provider with `cachedJson` (a few minutes' TTL; it keeps the last good copy on errors).
+
+   **Using a tool's own sign-in** (as the Claude Code and Codex cards do for plan limits): only read the token the tool saved, never refresh or write it back, and send it only to that tool's own provider. Fall back to the local numbers when the sign-in is missing, expired or rejected, and say why in `note`.
 2. **Register it** in `src/providers/index.js` with an `id`, `name`, `short` name, `kind` (`'local'` or `'remote'`), `console` (its usage page), `secrets`, `isConfigured` and `run`.
 3. **Add it to the defaults** in `src/config.js` (`order` and `providers`).
 4. **Add its Settings fields** in `PROVIDER_FIELDS` in `src/renderer/app.js`: help text, key and any folder or budget fields.
 5. **Add a demo card** in `src/demo.js`, so `npm run demo` shows it.
-6. **Test it** in `test/providers.test.js` with a mocked response or a fake log folder, including the error case.
-7. **Document it** in the Supported tools table in `README.md`.
+6. **Test it** in `test/providers.test.js` with a mocked response (pass `fetchImpl`) or a fake log folder, including the error and fallback cases.
+7. **Document it** in the Supported tools table in `README.md` and the tools list on the landing page (`site/index.html`). If it sends anything over the network, add that to the README's Privacy and security section too.
 
 ## Making UI changes
 
