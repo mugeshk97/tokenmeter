@@ -42,7 +42,7 @@ AI coding tools meter you in different ways: 5-hour windows, weekly limits, prem
 | Tool | Where the numbers come from | Setup | Shows |
 |---|---|---|---|
 | **Claude Code** | Your plan's limits from Anthropic (using Claude Code's sign-in), plus local transcripts in `~/.claude/projects` | None | 5-hour and weekly limits left with reset times, tokens today, top model, plan, hourly chart |
-| **Codex** | Your plan's limits from ChatGPT (using Codex's sign-in), plus local session logs in `~/.codex/sessions` | None | 5-hour and weekly limits left with reset times, tokens today, plan |
+| **Codex** | Your plan's limits from ChatGPT (using Codex's sign-in), plus local session logs in `~/.codex/sessions` | None | 5-hour and weekly limits left with reset times, tokens today, plan, credits |
 | **Gemini CLI** | Saved chats in `~/.gemini/tmp` | None | Tokens today and last 7 days, top model, hourly chart |
 | **Grok CLI** | Local session logs in `~/.grok/sessions` | None | Tokens today, cost today and this month (as the CLI reports it), cache hits |
 | **GitHub Copilot** | GitHub's Copilot quota endpoint | A GitHub token (`gh auth token`) | Premium requests left with reset date; chat and completions quota |
@@ -84,7 +84,7 @@ Or download the `.zip` for your Mac from the release (`arm64` for Apple Silicon,
 
 ## Getting started
 
-1. **Launch Tokenmeter.** Local tools (Claude Code, Codex, Gemini CLI, Grok CLI) show up on their own if you use them.
+1. **Launch Tokenmeter.** Local tools (Claude Code, Codex, Gemini CLI, Grok CLI) show up on their own if you use them. If you're signed in to Claude Code or Codex with your subscription, their cards show your real 5-hour and weekly limits with no extra setup.
 2. **Add keys for API tools** in **Settings** (the gear icon), or click **Set up** on the "not set up" line at the bottom of the widget:
    - **Claude API:** [Claude Console](https://platform.claude.com) → Settings → Admin Keys (organization accounts only).
    - **xAI API:** console.x.ai → Settings → Management Keys, plus your team ID from Team settings.
@@ -139,7 +139,7 @@ Found a security problem? Please report it privately through [GitHub security ad
 ## What the numbers mean
 
 - **Claude Code:** limits come from the same (undocumented) endpoint Claude Code's `/usage` uses, refreshed every few minutes. If Claude Code isn't signed in, or its sign-in has expired, the card shows only today's tokens until you open Claude Code again.
-- **Codex:** limits come live from ChatGPT (the endpoint Codex's `/status` uses), refreshed every few minutes. If Codex is signed in with an API key, or its sign-in has expired, the card falls back to the last snapshot Codex saved locally.
+- **Codex:** limits come live from ChatGPT (the endpoint Codex's `/status` uses), refreshed every few minutes. If Codex is signed in with an API key, its sign-in has expired, or ChatGPT can't be reached, the card falls back to the last snapshot Codex saved locally.
 - **GitHub Copilot:** uses the same undocumented endpoint as the Copilot editor extensions, which GitHub could change without notice.
 - **Gemini CLI:** Gemini API keys have no usage endpoint, so only usage through the CLI is counted.
 - **Grok CLI:** the cost is what the CLI reports (the API-equivalent price), not your grok.com subscription bill. Key-based spend is on the xAI API card.
@@ -149,6 +149,7 @@ Found a security problem? Please report it privately through [GitHub security ad
 
 - **No tray icon on GNOME:** install the *AppIndicator and KStatusNotifierItem Support* extension (Ubuntu ships it).
 - **Not staying on top on Wayland:** Wayland doesn't let apps keep themselves on top or pick their position, so Tokenmeter runs through XWayland by default (Settings → "Use XWayland on Wayland").
+- **Claude Code or Codex shows no plan limits:** open the tool once so it refreshes its sign-in; Tokenmeter only reads it and never signs in itself. Limits need a subscription sign-in (Claude Pro/Max, ChatGPT plan), not an API key. On macOS, Claude Code keeps its sign-in in the Keychain, so macOS may ask once whether Tokenmeter can read it: choose **Always Allow**.
 - **A local tool shows no data:** check its folder in Settings; the defaults are `~/.claude`, `~/.codex`, `~/.gemini` and `~/.grok` (for example `C:\Users\you\.codex` on Windows).
 - **Moving from "AI Usage Widget":** Tokenmeter copies your old settings on first start. Saved keys may need re-entering, because the keychain entry is tied to the app name.
 
